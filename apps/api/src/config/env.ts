@@ -19,6 +19,14 @@ const schema = z.object({
   JWT_SECRET: z.string().min(16, 'JWT_SECRET must be at least 16 chars'),
   JWT_EXPIRES_IN: z.string().default('7d'),
 
+  // Cookie security. Set COOKIE_SECURE=false for plain-HTTP (IP-only) deploys,
+  // otherwise the auth cookie won't be sent by the browser. Defaults to true
+  // in production (HTTPS), false in development.
+  COOKIE_SECURE: z
+    .string()
+    .optional()
+    .transform((v) => (v === undefined ? undefined : v.toLowerCase() === 'true')),
+
   GOOGLE_CLIENT_ID: z.string().optional().default(''),
   GOOGLE_CLIENT_SECRET: z.string().optional().default(''),
   GOOGLE_CALLBACK_URL: z

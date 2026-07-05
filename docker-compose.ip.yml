@@ -1,0 +1,103 @@
+# MH Game Shop — IP-only production stack (no domain / no nginx yet).
+# Exposes each app on its own port. Once you have a domain, switch to
+# docker-compose.prod.yml (which adds the nginx reverse proxy + subdomains).
+#
+# Usage:
+#   export SERVER_IP=YOUR_VPS_IP           # e.g. 203.0.113.10
+#   docker compose -f docker-compose.ip.yml up -d --build
+#
+# Then open:
+#   Storefront → http://SERVER_IP:3000
+#   Admin      → http://SERVER_IP:3001
+#   API        → http://SERVER_IP:4000/api/health
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-mhgs}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mhgs_secret}
+      POSTGRES_DB: ${POSTGRES_DB:-mhgameshop}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-mhgs}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    restart: always
+    command: redis-server --appendonly yes
+    volumes:
+      - redisdata:/data
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    restart: always
+    env_file:
+      - apps/api/.env
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: redis://redis:6379
+    ports:
+      - "4000:4000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    volumes:
+      - uploads:/app/apps/api/public/storage
+
+  worker:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    restart: always
+    command: ["npx", "tsx", "src/queue/worker.ts"]
+    env_file:
+      - apps/api/.env
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      - api
+      - redis
+    volumes:
+      - uploads:/app/apps/api/public/storage
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:4000}
+    restart: always
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+
+  admin:
+    build:
+      context: .
+      dockerfile: apps/admin/Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:4000}
+    restart: always
+    ports:
+      - "3001:3001"
+    depends_on:
+      - api
+
+volumes:
+  pgdata:
+  redisdata:
+  uploads:

@@ -12,11 +12,13 @@ import { ok, created } from '../utils/response';
 const router = Router();
 
 const COOKIE_NAME = 'token';
+// secure cookies require HTTPS; over plain HTTP (IP-only) set COOKIE_SECURE=false.
+const COOKIE_SECURE = env.COOKIE_SECURE ?? isProd;
 function setAuthCookie(res: Response, token: string) {
   res.cookie(COOKIE_NAME, token, {
     httpOnly: true,
-    secure: isProd,
-    sameSite: isProd ? 'none' : 'lax',
+    secure: COOKIE_SECURE,
+    sameSite: COOKIE_SECURE ? 'none' : 'lax',
     maxAge: 7 * 24 * 60 * 60 * 1000,
     path: '/',
   });

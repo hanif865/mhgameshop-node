@@ -3,7 +3,61 @@
 Deploys the full stack (api, worker, web, admin, postgres, redis, nginx) with
 Docker Compose on a single Ubuntu VPS.
 
-## 0. Prerequisites
+## Quick start — IP only (no domain yet)
+
+Use this to go live immediately on the raw server IP, before you have a domain.
+Each app is exposed on its own port; nginx is skipped.
+
+```bash
+# 1. bootstrap (installs docker etc.)
+export REPO_URL=https://github.com/Mahmud865/mhgameshop-node.git
+curl -fsSL https://raw.githubusercontent.com/Mahmud865/mhgameshop-node/main/deploy/vps-setup.sh | bash
+cd /opt/mhgameshop
+
+# 2. open app ports
+sudo ufw allow 3000/tcp && sudo ufw allow 3001/tcp && sudo ufw allow 4000/tcp
+
+# 3. env — replace 203.0.113.10 with YOUR server IP
+cat > .env <<EOF
+POSTGRES_USER=mhgs
+POSTGRES_PASSWORD=$(openssl rand -hex 16)
+POSTGRES_DB=mhgameshop
+DATABASE_URL=postgresql://mhgs:REPLACE_WITH_ABOVE_PASSWORD@postgres:5432/mhgameshop?schema=public
+NEXT_PUBLIC_API_URL=http://203.0.113.10:4000
+EOF
+
+cp apps/api/.env.example apps/api/.env
+# edit apps/api/.env — at minimum set:
+#   DATABASE_URL   (same as above, host = postgres)
+#   REDIS_URL=redis://redis:6379
+#   JWT_SECRET     (long random)
+#   COOKIE_SECURE=false           # REQUIRED over plain HTTP or login breaks
+#   APP_URL=http://203.0.113.10:4000
+#   WEB_URL=http://203.0.113.10:3000
+#   ADMIN_URL=http://203.0.113.10:3001
+
+# 4. build & run
+sudo docker compose -f docker-compose.ip.yml up -d --build
+
+# 5. database
+sudo docker compose -f docker-compose.ip.yml exec api npm run db:push -w @mhgs/database
+sudo docker compose -f docker-compose.ip.yml exec api npm run db:seed -w @mhgs/database
+```
+
+Open **http://SERVER_IP:3000** (store), **:3001** (admin), **:4000/api/health** (api).
+Make yourself admin: register on the store, then
+
+```bash
+sudo docker compose -f docker-compose.ip.yml exec postgres \
+  psql -U mhgs -d mhgameshop -c "UPDATE users SET role='admin' WHERE email='you@example.com';"
+```
+
+When your domain is ready, switch to the full guide below (nginx + subdomains + SSL)
+and set `COOKIE_SECURE=true`.
+
+---
+
+## 0. Prerequisites (domain-based, full stack)
 
 - A VPS (Ubuntu 22.04/24.04, ≥ 2 GB RAM recommended) with root/sudo SSH access.
 - A domain with three A-records pointing at the VPS IP:
