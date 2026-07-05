@@ -1,5 +1,17 @@
 import { API_URL } from './config';
 
+/**
+ * Server components run inside the container and should reach the API over the
+ * internal docker network (fast, no public DNS / TLS hairpin). The browser must
+ * use the public URL. INTERNAL_API_URL is a runtime env on the web container.
+ */
+function baseUrl(): string {
+  if (typeof window === 'undefined') {
+    return process.env.INTERNAL_API_URL || process.env.NEXT_PUBLIC_API_URL || API_URL;
+  }
+  return API_URL;
+}
+
 export interface ApiResult<T> {
   success: boolean;
   message?: string;
@@ -26,7 +38,7 @@ export async function api<T = unknown>(
 
   let res: Response;
   try {
-    res = await fetch(`${API_URL}${path}`, {
+    res = await fetch(`${baseUrl()}${path}`, {
       credentials: 'include',
       headers: {
         'Content-Type': 'application/json',

@@ -8,10 +8,19 @@ export interface ApiResult<T = unknown> {
   [key: string]: unknown;
 }
 
+// Server-side rendering reaches the API over the internal docker network;
+// the browser uses the public URL.
+function baseUrl(): string {
+  if (typeof window === 'undefined') {
+    return process.env.INTERNAL_API_URL || process.env.NEXT_PUBLIC_API_URL || API_URL;
+  }
+  return API_URL;
+}
+
 async function request<T>(path: string, options: RequestInit = {}): Promise<ApiResult<T>> {
   let res: Response;
   try {
-    res = await fetch(`${API_URL}${path}`, {
+    res = await fetch(`${baseUrl()}${path}`, {
       credentials: 'include',
       headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
       cache: 'no-store',

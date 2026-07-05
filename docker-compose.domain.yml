@@ -74,6 +74,9 @@ services:
       args:
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-https://api.mhgameshop.com}
     restart: always
+    environment:
+      # Server-side (SSR) fetches use the internal network; browser uses the public URL.
+      INTERNAL_API_URL: http://api:4000
     depends_on:
       - api
 
@@ -84,6 +87,8 @@ services:
       args:
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-https://api.mhgameshop.com}
     restart: always
+    environment:
+      INTERNAL_API_URL: http://api:4000
     depends_on:
       - api
 

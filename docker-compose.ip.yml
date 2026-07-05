@@ -82,6 +82,8 @@ services:
     restart: always
     ports:
       - "3000:3000"
+    environment:
+      INTERNAL_API_URL: http://api:4000
     depends_on:
       - api
 
@@ -94,6 +96,8 @@ services:
     restart: always
     ports:
       - "3001:3001"
+    environment:
+      INTERNAL_API_URL: http://api:4000
     depends_on:
       - api
 
