@@ -110,12 +110,14 @@ export async function placeOrderViaShell(order: any): Promise<void> {
   const payload = {
     orderid: String(order.id),
     playerid: String(playerId),
-    pacakge: String(pkg),
-    code: 'shell',
+    package: String(pkg),
     url: webhookUrl(),
+    code: process.env.SHELL_CODE || 'shells-prefix',
     username: shell.username,
     password: shell.password,
     autocode: shell.autocode,
+    shell_balance: String(shell.shellbalance ?? ''),
+    tgbotid: String(shell.tgbotid ?? ''),
   };
 
   logger.info(`📤 TopupNet Shell order ${order.id} (${shell.name})`);
