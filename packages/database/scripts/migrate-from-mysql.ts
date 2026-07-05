@@ -235,16 +235,33 @@ async function main() {
     }),
   );
 
+  // Build valid-id sets so we can drop/nullify orphaned foreign keys (old rows
+  // often reference products/variations that were later deleted).
+  const validUserIds = new Set(
+    (await prisma.user.findMany({ select: { id: true } })).map((u) => u.id),
+  );
+  const validProductIds = new Set(
+    (await prisma.product.findMany({ select: { id: true } })).map((p) => p.id),
+  );
+  const validVariationIds = new Set(
+    (await prisma.variation.findMany({ select: { id: true } })).map((v) => v.id),
+  );
+
   // ---- Orders (before vouchers, which reference order_id) ----
-  const orders = await q('SELECT * FROM orders');
+  // Skip orders whose user or product no longer exists; null out missing variations.
+  const orders = (await q('SELECT * FROM orders')).filter(
+    (o) => validUserIds.has(o.user_id) && validProductIds.has(toInt(o.product_id) ?? -1),
+  );
   await insertChunked('orders', orders, (chunk) =>
     prisma.order.createMany({
       skipDuplicates: true,
       data: chunk.map((o) => ({
         id: o.id,
         userId: o.user_id,
-        productId: toInt(o.product_id) ?? 1,
-        variationId: toInt(o.variation_id),
+        productId: toInt(o.product_id)!,
+        variationId: validVariationIds.has(toInt(o.variation_id) ?? -1)
+          ? toInt(o.variation_id)
+          : null,
         comboPackageId: null,
         quantity: toInt(o.quantity) ?? 1,
         amount: String(o.amount ?? 0),
@@ -262,8 +279,17 @@ async function main() {
     }),
   );
 
-  // ---- Vouchers ----
-  const vouchers = await q('SELECT * FROM vouchers');
+  // Valid order ids (for nulling orphaned order references below).
+  const validOrderIds = new Set(
+    (await prisma.order.findMany({ select: { id: true } })).map((o) => o.id),
+  );
+  const validOrderId = (v: unknown) =>
+    validOrderIds.has(toInt(v) ?? -1) ? toInt(v) : null;
+
+  // ---- Vouchers (skip if variation missing; null orphaned order ref) ----
+  const vouchers = (await q('SELECT * FROM vouchers')).filter((v) =>
+    validVariationIds.has(v.variation_id),
+  );
   await insertChunked('vouchers', vouchers, (chunk) =>
     prisma.voucher.createMany({
       skipDuplicates: true,
@@ -272,7 +298,7 @@ async function main() {
         variationId: v.variation_id,
         code: v.code,
         status: normalizeStock(v.status, toInt(v.order_id)),
-        orderId: toInt(v.order_id),
+        orderId: validOrderId(v.order_id),
         transactionId: toStr(v.transaction_id),
         createdAt: toDate(v.created_at),
         updatedAt: toDate(v.updated_at),
@@ -281,7 +307,9 @@ async function main() {
   );
 
   // ---- Auto Vouchers ----
-  const autoVouchers = await q('SELECT * FROM auto_vouchers');
+  const autoVouchers = (await q('SELECT * FROM auto_vouchers')).filter((v) =>
+    validVariationIds.has(v.variation_id),
+  );
   await insertChunked('auto_vouchers', autoVouchers, (chunk) =>
     prisma.autoVoucher.createMany({
       skipDuplicates: true,
@@ -290,22 +318,24 @@ async function main() {
         variationId: v.variation_id,
         code: v.code,
         status: normalizeStock(v.status, toInt(v.order_id)),
-        orderId: toInt(v.order_id),
+        orderId: validOrderId(v.order_id),
         createdAt: toDate(v.created_at),
         updatedAt: toDate(v.updated_at),
       })),
     }),
   );
 
-  // ---- Transactions ----
-  const transactions = await q('SELECT * FROM transactions');
+  // ---- Transactions (skip if user missing; null orphaned order ref) ----
+  const transactions = (await q('SELECT * FROM transactions')).filter((t) =>
+    validUserIds.has(t.user_id),
+  );
   await insertChunked('transactions', transactions, (chunk) =>
     prisma.transaction.createMany({
       skipDuplicates: true,
       data: chunk.map((t) => ({
         id: t.id,
         userId: t.user_id,
-        orderId: toInt(t.order_id),
+        orderId: validOrderId(t.order_id),
         trxType: (t.trx_type === '+' ? 'credit' : 'debit') as any,
         amount: String(t.amount ?? 0),
         paymentMethod: String(t.payment_method ?? 'wallet'),
@@ -317,8 +347,10 @@ async function main() {
     }),
   );
 
-  // ---- Deposits ----
-  const deposits = await q('SELECT * FROM deposits');
+  // ---- Deposits (skip if user missing) ----
+  const deposits = (await q('SELECT * FROM deposits')).filter((d) =>
+    validUserIds.has(d.user_id),
+  );
   await insertChunked('deposits', deposits, (chunk) =>
     prisma.deposit.createMany({
       skipDuplicates: true,
@@ -370,8 +402,10 @@ async function main() {
     }),
   );
 
-  // ---- Idempotency keys ----
-  const idem = await q('SELECT * FROM idempotency_keys').catch(() => [] as any[]);
+  // ---- Idempotency keys (skip if user missing) ----
+  const idem = (await q('SELECT * FROM idempotency_keys').catch(() => [] as any[])).filter(
+    (k) => validUserIds.has(k.user_id),
+  );
   await insertChunked('idempotency_keys', idem, (chunk) =>
     prisma.idempotencyKey.createMany({
       skipDuplicates: true,
