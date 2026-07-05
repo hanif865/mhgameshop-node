@@ -24,17 +24,23 @@ export async function api<T = unknown>(
 ): Promise<ApiResult<T>> {
   const { revalidate, headers, ...rest } = options;
 
-  const res = await fetch(`${API_URL}${path}`, {
-    credentials: 'include',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(headers || {}),
-    },
-    ...(revalidate !== undefined
-      ? { next: { revalidate } }
-      : { cache: 'no-store' as RequestCache }),
-    ...rest,
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${API_URL}${path}`, {
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(headers || {}),
+      },
+      ...(revalidate !== undefined
+        ? { next: { revalidate } }
+        : { cache: 'no-store' as RequestCache }),
+      ...rest,
+    });
+  } catch {
+    // Network error (e.g. API unreachable during build or downtime).
+    return { success: false, message: 'Network error — please try again.' };
+  }
 
   let json: ApiResult<T>;
   try {

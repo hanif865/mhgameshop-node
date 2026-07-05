@@ -10,7 +10,9 @@ interface Product extends ProductLite {
   category: { id: number; title: string } | null;
 }
 
-export const revalidate = 60;
+// Rendered on-demand (not prerendered at build) so it always shows live data
+// and never fails the build when the API isn't reachable.
+export const dynamic = 'force-dynamic';
 
 export default async function HomePage() {
   const [productsRes, slidersRes, ordersRes] = await Promise.all([

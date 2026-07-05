@@ -9,12 +9,17 @@ export interface ApiResult<T = unknown> {
 }
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<ApiResult<T>> {
-  const res = await fetch(`${API_URL}${path}`, {
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
-    cache: 'no-store',
-    ...options,
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${API_URL}${path}`, {
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
+      cache: 'no-store',
+      ...options,
+    });
+  } catch {
+    return { success: false, message: 'Network error — please try again.' };
+  }
   try {
     return (await res.json()) as ApiResult<T>;
   } catch {
