@@ -1,0 +1,26 @@
+# MH Game Shop — Caddy reverse proxy with automatic HTTPS (Let's Encrypt).
+# Used by docker-compose.domain.yml. Requires DNS A-records for all four
+# hostnames pointing at the server.
+
+# Redirect www → apex (keeps a single CORS origin).
+www.mhgameshop.com {
+	redir https://mhgameshop.com{uri} permanent
+}
+
+# Storefront
+mhgameshop.com {
+	encode gzip
+	reverse_proxy web:3000
+}
+
+# Admin panel
+admin.mhgameshop.com {
+	encode gzip
+	reverse_proxy admin:3001
+}
+
+# API + websockets (Caddy proxies WebSocket upgrades automatically)
+api.mhgameshop.com {
+	encode gzip
+	reverse_proxy api:4000
+}
