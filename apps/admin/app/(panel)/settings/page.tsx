@@ -1,0 +1,187 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { Loader2, Save } from 'lucide-react';
+import { apiGet, apiPut } from '@/lib/api';
+import { useToast } from '@/components/ui/Toast';
+
+type Settings = Record<string, string>;
+
+interface Field {
+  key: string;
+  label: string;
+  type?: 'text' | 'textarea' | 'toggle' | 'color' | 'password';
+}
+interface Section {
+  title: string;
+  fields: Field[];
+}
+
+const SECTIONS: Section[] = [
+  {
+    title: 'Site Info',
+    fields: [
+      { key: 'site_name', label: 'Site Name' },
+      { key: 'site_title', label: 'Site Title' },
+      { key: 'site_logo', label: 'Logo URL' },
+      { key: 'site_favicon', label: 'Favicon URL' },
+      { key: 'site_description', label: 'Description', type: 'textarea' },
+    ],
+  },
+  {
+    title: 'Social Links',
+    fields: [
+      { key: 'whatsapp_number', label: 'WhatsApp Number' },
+      { key: 'telegram_url', label: 'Telegram URL' },
+      { key: 'facebook_url', label: 'Facebook URL' },
+      { key: 'instagram_url', label: 'Instagram URL' },
+      { key: 'youtube_url', label: 'YouTube URL' },
+      { key: 'messenger_url', label: 'Messenger URL' },
+      { key: 'support_time', label: 'Support Time' },
+    ],
+  },
+  {
+    title: 'Wallet & Payment (UddoktaPay)',
+    fields: [
+      { key: 'wallet', label: 'Enable Wallet', type: 'toggle' },
+      { key: 'uddoktapay_enabled', label: 'Enable UddoktaPay', type: 'toggle' },
+      { key: 'uddoktapay_api_key', label: 'UddoktaPay API Key', type: 'password' },
+      { key: 'uddoktapay_api_url', label: 'UddoktaPay Base URL' },
+    ],
+  },
+  {
+    title: 'Auto Topup (TopupNet)',
+    fields: [
+      { key: 'enable_auto_topup', label: 'Enable Auto Topup', type: 'toggle' },
+      { key: 'free_fire_server_url', label: 'TopupNet Base URL' },
+      { key: 'free_fire_server_api_key', label: 'TopupNet API Key', type: 'password' },
+      { key: 'unipin_product_id', label: 'UniPin Product ID (combo)' },
+    ],
+  },
+  {
+    title: 'Telegram Notifications',
+    fields: [
+      { key: 'telegram_bot_token', label: 'Bot Token', type: 'password' },
+      { key: 'telegram_chat_id', label: 'Chat ID' },
+    ],
+  },
+  {
+    title: 'Notice Bar',
+    fields: [
+      { key: 'enable_notice', label: 'Enable Notice', type: 'toggle' },
+      { key: 'notice_title', label: 'Notice Title' },
+      { key: 'notice_content', label: 'Notice Content', type: 'textarea' },
+      { key: 'notice_background_color', label: 'Background Color', type: 'color' },
+      { key: 'notice_font_color', label: 'Font Color', type: 'color' },
+    ],
+  },
+  {
+    title: 'Advanced',
+    fields: [{ key: 'header_tags', label: 'Header Custom Tags (HTML)', type: 'textarea' }],
+  },
+];
+
+const isTruthy = (v: string) => ['1', 'true', 'on', 'yes'].includes(String(v).toLowerCase());
+
+export default function SettingsPage() {
+  const toast = useToast();
+  const [values, setValues] = useState<Settings>({});
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    apiGet<Settings>('/api/admin/settings').then((res) => {
+      const data: Settings = {};
+      for (const [k, v] of Object.entries(res.data ?? {})) data[k] = v ?? '';
+      setValues(data);
+      setLoading(false);
+    });
+  }, []);
+
+  function set(key: string, value: string) {
+    setValues((v) => ({ ...v, [key]: value }));
+  }
+
+  async function save() {
+    setSaving(true);
+    const res = await apiPut('/api/admin/settings', values);
+    setSaving(false);
+    if (res.success) toast.success('Settings saved.');
+    else toast.error(res.message || 'Save failed.');
+  }
+
+  if (loading)
+    return (
+      <div className="flex justify-center py-16 text-slate-300">
+        <Loader2 className="animate-spin" />
+      </div>
+    );
+
+  return (
+    <div className="pb-20">
+      <div className="mb-5 flex items-center justify-between">
+        <h1 className="text-2xl font-bold text-slate-800">Settings</h1>
+        <button onClick={save} disabled={saving} className="btn-primary">
+          {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />} Save All
+        </button>
+      </div>
+
+      <div className="grid gap-5 lg:grid-cols-2">
+        {SECTIONS.map((section) => (
+          <div key={section.title} className="card p-5">
+            <h2 className="mb-4 font-bold text-slate-800">{section.title}</h2>
+            <div className="space-y-3">
+              {section.fields.map((f) => (
+                <div key={f.key}>
+                  {f.type === 'toggle' ? (
+                    <label className="flex items-center gap-2 text-sm font-medium text-slate-600">
+                      <input
+                        type="checkbox"
+                        checked={isTruthy(values[f.key] ?? '')}
+                        onChange={(e) => set(f.key, e.target.checked ? '1' : '0')}
+                      />
+                      {f.label}
+                    </label>
+                  ) : (
+                    <>
+                      <label className="label">{f.label}</label>
+                      {f.type === 'textarea' ? (
+                        <textarea
+                          rows={3}
+                          className="input"
+                          value={values[f.key] ?? ''}
+                          onChange={(e) => set(f.key, e.target.value)}
+                        />
+                      ) : f.type === 'color' ? (
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="color"
+                            className="h-10 w-14 rounded border border-slate-200"
+                            value={values[f.key] || '#16a34a'}
+                            onChange={(e) => set(f.key, e.target.value)}
+                          />
+                          <input
+                            className="input"
+                            value={values[f.key] ?? ''}
+                            onChange={(e) => set(f.key, e.target.value)}
+                          />
+                        </div>
+                      ) : (
+                        <input
+                          type={f.type === 'password' ? 'password' : 'text'}
+                          className="input"
+                          value={values[f.key] ?? ''}
+                          onChange={(e) => set(f.key, e.target.value)}
+                        />
+                      )}
+                    </>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}

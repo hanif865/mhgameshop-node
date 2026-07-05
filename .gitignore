@@ -1,0 +1,26 @@
+node_modules/
+dist/
+.next/
+out/
+.turbo/
+coverage/
+
+# env
+.env
+.env.local
+.env.*.local
+
+# logs
+logs/
+*.log
+npm-debug.log*
+
+# prisma
+packages/database/prisma/*.db
+
+# os
+.DS_Store
+Thumbs.db
+
+# uploads (runtime)
+apps/api/public/storage/

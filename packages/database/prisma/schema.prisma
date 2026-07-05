@@ -1,0 +1,394 @@
+// MH Game Shop — Prisma schema (PostgreSQL)
+// Clean rewrite target. Legacy MySQL columns are translated by
+// scripts/migrate-from-mysql.ts (e.g. avator->avatar, gauth_id->google_id,
+// content->description, spatie media->image, spatie settings->key/value).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ------------------------------------------------------------------
+// Enums
+// ------------------------------------------------------------------
+
+enum Role {
+  user
+  admin
+  reseller
+}
+
+enum ProductType {
+  topup
+  voucher
+  ingame
+  subscription
+  autolike
+}
+
+enum OrderStatus {
+  pending
+  processing
+  autoprocessing
+  completed
+  cancelled
+  hold
+}
+
+enum StockStatus {
+  available
+  sold
+}
+
+enum TrxType {
+  credit
+  debit
+}
+
+enum DepositStatus {
+  pending
+  paid
+  failed
+}
+
+enum ComboItemStatus {
+  pending
+  success
+  failed
+}
+
+// ------------------------------------------------------------------
+// Models
+// ------------------------------------------------------------------
+
+model User {
+  id            Int      @id @default(autoincrement())
+  name          String
+  email         String   @unique
+  password      String?
+  googleId      String?  @unique @map("google_id")
+  googleAvatar  String?  @map("google_avatar")
+  avatar        String?
+  phone         String?
+  balance       Decimal  @default(0) @db.Decimal(16, 2)
+  role          Role     @default(user)
+  status        Int      @default(1) // 1 = active, 0 = banned
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  orders          Order[]
+  deposits        Deposit[]
+  transactions    Transaction[]
+  idempotencyKeys IdempotencyKey[]
+
+  @@map("users")
+}
+
+model Category {
+  id          Int      @id @default(autoincrement())
+  title       String
+  icon        String?
+  orderColumn Int      @default(0) @map("order_column")
+  status      Int      @default(1)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  products Product[]
+
+  @@map("categories")
+}
+
+model Product {
+  id          Int         @id @default(autoincrement())
+  categoryId  Int         @map("category_id")
+  title       String
+  slug        String      @unique
+  type        ProductType
+  image       String?
+  description String?     @db.Text
+  shellId     Int?        @map("shell_id")
+  orderColumn Int         @default(0) @map("order_column")
+  status      Int         @default(1)
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
+
+  category      Category       @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  shell         Shell?         @relation(fields: [shellId], references: [id], onDelete: SetNull)
+  variations    Variation[]
+  comboPackages ComboPackage[]
+  orders        Order[]
+
+  @@index([categoryId])
+  @@index([status])
+  @@map("products")
+}
+
+model Variation {
+  id                Int      @id @default(autoincrement())
+  productId         Int      @map("product_id")
+  title             String
+  price             Decimal  @default(0) @db.Decimal(16, 2)
+  buyRate           Decimal  @default(0) @map("buy_rate") @db.Decimal(16, 2)
+  stock             Int      @default(0)
+  provider          String?
+  providerProductId String?  @map("provider_product_id")
+  automatic         Boolean  @default(false)
+  orderColumn       Int      @default(0) @map("order_column")
+  status            Int      @default(1)
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  product      Product       @relation(fields: [productId], references: [id], onDelete: Cascade)
+  vouchers     Voucher[]
+  autoVouchers AutoVoucher[]
+  orders       Order[]
+
+  @@index([productId])
+  @@index([providerProductId])
+  @@map("variations")
+}
+
+model Voucher {
+  id            Int         @id @default(autoincrement())
+  variationId   Int         @map("variation_id")
+  code          String
+  status        StockStatus @default(available)
+  orderId       Int?        @map("order_id")
+  transactionId String?     @map("transaction_id")
+  createdAt     DateTime    @default(now()) @map("created_at")
+  updatedAt     DateTime    @updatedAt @map("updated_at")
+
+  variation Variation @relation(fields: [variationId], references: [id], onDelete: Cascade)
+  order     Order?    @relation(fields: [orderId], references: [id], onDelete: SetNull)
+
+  @@index([variationId, status])
+  @@map("vouchers")
+}
+
+model AutoVoucher {
+  id          Int         @id @default(autoincrement())
+  variationId Int         @map("variation_id")
+  code        String
+  status      StockStatus @default(available)
+  orderId     Int?        @map("order_id")
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
+
+  variation Variation @relation(fields: [variationId], references: [id], onDelete: Cascade)
+  order     Order?    @relation(fields: [orderId], references: [id], onDelete: SetNull)
+
+  @@index([variationId, status])
+  @@map("auto_vouchers")
+}
+
+model Shell {
+  id           Int      @id @default(autoincrement())
+  name         String
+  username     String
+  password     String
+  autocode     String
+  shellbalance String?
+  tgbotid      String?
+  status       Int      @default(1)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  products Product[]
+
+  @@map("shells")
+}
+
+model ComboPackage {
+  id          Int      @id @default(autoincrement())
+  productId   Int      @map("product_id")
+  title       String
+  price       Decimal  @default(0) @db.Decimal(16, 2)
+  buyRate     Decimal  @default(0) @map("buy_rate") @db.Decimal(16, 2)
+  stock       Int      @default(0)
+  orderColumn Int      @default(0) @map("order_column")
+  status      Int      @default(1)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  product Product            @relation(fields: [productId], references: [id], onDelete: Cascade)
+  items   ComboPackageItem[]
+  orders  Order[]
+
+  @@index([productId])
+  @@map("combo_packages")
+}
+
+model ComboPackageItem {
+  id             Int      @id @default(autoincrement())
+  comboPackageId Int      @map("combo_package_id")
+  title          String?
+  quantity       Int      @default(1)
+  orderColumn    Int      @default(0) @map("order_column")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  comboPackage    ComboPackage          @relation(fields: [comboPackageId], references: [id], onDelete: Cascade)
+  vouchers        ComboPackageVoucher[]
+  comboOrderItems ComboOrderItem[]
+
+  @@index([comboPackageId])
+  @@map("combo_package_items")
+}
+
+model ComboPackageVoucher {
+  id                 Int         @id @default(autoincrement())
+  comboPackageItemId Int         @map("combo_package_item_id")
+  code               String
+  status             StockStatus @default(available)
+  orderId            Int?        @map("order_id")
+  createdAt          DateTime    @default(now()) @map("created_at")
+  updatedAt          DateTime    @updatedAt @map("updated_at")
+
+  comboPackageItem ComboPackageItem @relation(fields: [comboPackageItemId], references: [id], onDelete: Cascade)
+  comboOrderItems  ComboOrderItem[]
+
+  @@index([comboPackageItemId, status])
+  @@map("combo_package_vouchers")
+}
+
+model Order {
+  id              Int         @id @default(autoincrement())
+  userId          Int         @map("user_id")
+  productId       Int         @map("product_id")
+  variationId     Int?        @map("variation_id")
+  comboPackageId  Int?        @map("combo_package_id")
+  quantity        Int         @default(1)
+  amount          Decimal     @default(0) @db.Decimal(16, 2)
+  profit          Decimal     @default(0) @db.Decimal(16, 2)
+  trackId         String      @unique @map("track_id")
+  accountInfo     Json?       @map("account_info")
+  voucherCode     String?     @map("voucher_code")
+  deliveryMessage String?     @map("delivery_message") @db.Text
+  topupRefId      String?     @map("topup_ref_id")
+  paymentMethod   String?     @map("payment_method")
+  status          OrderStatus @default(pending)
+  createdAt       DateTime    @default(now()) @map("created_at")
+  updatedAt       DateTime    @updatedAt @map("updated_at")
+
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product         Product          @relation(fields: [productId], references: [id])
+  variation       Variation?       @relation(fields: [variationId], references: [id])
+  comboPackage    ComboPackage?    @relation(fields: [comboPackageId], references: [id])
+  transactions    Transaction[]
+  vouchers        Voucher[]
+  autoVouchers    AutoVoucher[]
+  comboOrderItems ComboOrderItem[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("orders")
+}
+
+model ComboOrderItem {
+  id                    Int             @id @default(autoincrement())
+  orderId               Int             @map("order_id")
+  comboPackageItemId    Int             @map("combo_package_item_id")
+  comboPackageVoucherId Int?            @map("combo_package_voucher_id")
+  itemIndex             Int             @map("item_index")
+  status                ComboItemStatus @default(pending)
+  responseContent       String?         @map("response_content") @db.Text
+  createdAt             DateTime        @default(now()) @map("created_at")
+  updatedAt             DateTime        @updatedAt @map("updated_at")
+
+  order            Order                @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  comboPackageItem ComboPackageItem     @relation(fields: [comboPackageItemId], references: [id])
+  comboVoucher     ComboPackageVoucher? @relation(fields: [comboPackageVoucherId], references: [id])
+
+  @@index([orderId])
+  @@map("combo_order_items")
+}
+
+model Transaction {
+  id            Int      @id @default(autoincrement())
+  userId        Int      @map("user_id")
+  orderId       Int?     @map("order_id")
+  trxType       TrxType  @map("trx_type")
+  amount        Decimal  @default(0) @db.Decimal(16, 2)
+  paymentMethod String   @map("payment_method")
+  transactionId String   @map("transaction_id")
+  remarks       String?  @db.Text
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  order Order? @relation(fields: [orderId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([trxType])
+  @@map("transactions")
+}
+
+model Deposit {
+  id            Int           @id @default(autoincrement())
+  userId        Int           @map("user_id")
+  amount        Decimal       @default(0) @db.Decimal(16, 2)
+  paymentMethod String        @map("payment_method")
+  transactionId String?       @map("transaction_id")
+  status        DepositStatus @default(pending)
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
+  @@map("deposits")
+}
+
+model Slider {
+  id          Int      @id @default(autoincrement())
+  title       String?
+  image       String?
+  url         String?
+  orderColumn Int      @default(0) @map("order_column")
+  status      Int      @default(1)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("sliders")
+}
+
+model Page {
+  id        Int      @id @default(autoincrement())
+  title     String
+  slug      String   @unique
+  content   String   @db.Text
+  status    Int      @default(1)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("pages")
+}
+
+model Setting {
+  id        Int      @id @default(autoincrement())
+  key       String   @unique
+  value     String?  @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("settings")
+}
+
+model IdempotencyKey {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  key       String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, key])
+  @@map("idempotency_keys")
+}
