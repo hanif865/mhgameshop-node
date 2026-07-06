@@ -154,7 +154,7 @@ export function Checkout({ product }: { product: CheckoutProduct }) {
                   key={`v-${v.id}`}
                   title={v.title}
                   price={v.price}
-                  outOfStock={v.stock <= 0 && product.type === 'voucher'}
+                  outOfStock={v.stock <= 0}
                   active={selection?.kind === 'variation' && selection.id === v.id}
                   onClick={() =>
                     setSelection({ kind: 'variation', id: v.id, price: v.price, stock: v.stock })
