@@ -19,7 +19,7 @@ interface CodeOrder {
 export default function CodesPage() {
   const toast = useToast();
   const { get } = useSettings();
-  const redeemUrl = get('unipin_redeem_url', 'https://www.unipin.com/');
+  const redeemUrl = get('unipin_redeem_url', 'https://shop.garena.my/');
   const [orders, setOrders] = useState<CodeOrder[]>([]);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
