@@ -51,7 +51,12 @@ export function Navbar() {
               >
                 {user.avatar ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={user.avatar} alt="" className="h-full w-full object-cover" />
+                  <img
+                    src={user.avatar}
+                    alt=""
+                    className="h-full w-full object-cover"
+                    referrerPolicy="no-referrer"
+                  />
                 ) : (
                   user.name.charAt(0).toUpperCase()
                 )}

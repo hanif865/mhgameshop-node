@@ -55,16 +55,18 @@ export function ProfileDrawer({ open, onClose }: { open: boolean; onClose: () =>
     <>
       <div
         className={clsx(
-          'fixed inset-0 z-50 bg-black/40 transition-opacity',
+          'fixed inset-0 z-50 transition-opacity',
           open ? 'opacity-100' : 'pointer-events-none opacity-0',
         )}
+        style={{ backgroundColor: 'rgba(0,0,0,0.45)' }}
         onClick={onClose}
       />
       <aside
         className={clsx(
-          'fixed right-0 top-0 z-50 flex h-full w-80 max-w-[85%] flex-col bg-white shadow-2xl transition-transform',
+          'fixed right-0 top-0 z-50 flex h-full w-80 max-w-[85%] flex-col shadow-2xl transition-transform',
           open ? 'translate-x-0' : 'translate-x-full',
         )}
+        style={{ backgroundColor: '#ffffff' }}
       >
         <div className="flex items-center justify-between border-b border-slate-100 p-4">
           <span className="font-bold text-primary-dark">Menu</span>
@@ -78,7 +80,12 @@ export function ProfileDrawer({ open, onClose }: { open: boolean; onClose: () =>
             <div className="grid h-11 w-11 place-items-center overflow-hidden rounded-full bg-primary text-white font-bold">
               {user.avatar ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={user.avatar} alt="" className="h-full w-full object-cover" />
+                <img
+                  src={user.avatar}
+                  alt=""
+                  className="h-full w-full object-cover"
+                  referrerPolicy="no-referrer"
+                />
               ) : (
                 user.name.charAt(0).toUpperCase()
               )}

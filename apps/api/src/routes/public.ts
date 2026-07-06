@@ -62,30 +62,27 @@ router.get(
       select: {
         id: true,
         status: true,
+        amount: true,
         createdAt: true,
-        accountInfo: true,
-        user: { select: { name: true } },
+        user: { select: { name: true, avatar: true, googleAvatar: true } },
         variation: { select: { title: true } },
         comboPackage: { select: { title: true } },
-        product: { select: { title: true } },
+        product: { select: { title: true, image: true } },
       },
     });
 
-    // Mask player id / username lightly for the public feed.
-    const masked = orders.map((o) => ({
+    const items = orders.map((o) => ({
       id: o.id,
       status: o.status,
+      amount: o.amount,
       createdAt: o.createdAt,
       title: o.variation?.title ?? o.comboPackage?.title ?? o.product?.title ?? 'Order',
-      user: maskName(o.user?.name ?? 'User'),
+      productImage: o.product?.image ?? null,
+      user: o.user?.name ?? 'User',
+      avatar: o.user?.avatar ?? o.user?.googleAvatar ?? null,
     }));
-    return ok(res, masked);
+    return ok(res, items);
   }),
 );
-
-function maskName(name: string): string {
-  if (name.length <= 2) return name[0] + '*';
-  return name.slice(0, 2) + '*'.repeat(Math.min(4, name.length - 2));
-}
 
 export default router;
