@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { Loader2, Save } from 'lucide-react';
-import { apiGet, apiPut } from '@/lib/api';
+import { useEffect, useRef, useState } from 'react';
+import { Loader2, Save, Upload } from 'lucide-react';
+import { apiGet, apiPut, apiUpload } from '@/lib/api';
+import { imageUrl } from '@/lib/config';
 import { useToast } from '@/components/ui/Toast';
 
 type Settings = Record<string, string>;
@@ -10,7 +11,7 @@ type Settings = Record<string, string>;
 interface Field {
   key: string;
   label: string;
-  type?: 'text' | 'textarea' | 'toggle' | 'color' | 'password';
+  type?: 'text' | 'textarea' | 'toggle' | 'color' | 'password' | 'image';
 }
 interface Section {
   title: string;
@@ -23,8 +24,9 @@ const SECTIONS: Section[] = [
     fields: [
       { key: 'site_name', label: 'Site Name' },
       { key: 'site_title', label: 'Site Title' },
-      { key: 'site_logo', label: 'Logo URL' },
-      { key: 'site_favicon', label: 'Favicon URL' },
+      { key: 'site_logo', label: 'Logo', type: 'image' },
+      { key: 'site_favicon', label: 'Favicon', type: 'image' },
+      { key: 'pwa_icon', label: 'PWA / App Icon (square PNG)', type: 'image' },
       { key: 'site_description', label: 'Description', type: 'textarea' },
     ],
   },
@@ -98,8 +100,24 @@ export default function SettingsPage() {
     });
   }, []);
 
+  const [uploading, setUploading] = useState<string | null>(null);
+
   function set(key: string, value: string) {
     setValues((v) => ({ ...v, [key]: value }));
+  }
+
+  async function uploadImage(key: string, file: File) {
+    setUploading(key);
+    const form = new FormData();
+    form.append('file', file);
+    const res = await apiUpload<{ value: string }>(`/api/admin/settings/upload/${key}`, form);
+    setUploading(null);
+    if (res.success && res.data) {
+      set(key, res.data.value);
+      toast.success('Image uploaded.');
+    } else {
+      toast.error(res.message || 'Upload failed.');
+    }
   }
 
   async function save() {
@@ -142,6 +160,42 @@ export default function SettingsPage() {
                       />
                       {f.label}
                     </label>
+                  ) : f.type === 'image' ? (
+                    <>
+                      <label className="label">{f.label}</label>
+                      <div className="flex items-center gap-3">
+                        {values[f.key] ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={imageUrl(values[f.key])}
+                            alt=""
+                            className="h-14 w-14 rounded-lg border border-slate-200 object-contain bg-slate-50"
+                          />
+                        ) : (
+                          <div className="grid h-14 w-14 place-items-center rounded-lg border border-dashed border-slate-300 text-slate-300">
+                            <Upload size={18} />
+                          </div>
+                        )}
+                        <label className="btn-ghost cursor-pointer">
+                          {uploading === f.key ? (
+                            <Loader2 size={14} className="animate-spin" />
+                          ) : (
+                            <Upload size={14} />
+                          )}
+                          Upload
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) uploadImage(f.key, file);
+                              e.target.value = '';
+                            }}
+                          />
+                        </label>
+                      </div>
+                    </>
                   ) : (
                     <>
                       <label className="label">{f.label}</label>

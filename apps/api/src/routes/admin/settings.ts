@@ -1,11 +1,30 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { prisma } from '../../config/database';
-import { asyncHandler } from '../../middleware/error';
+import { asyncHandler, HttpError } from '../../middleware/error';
 import { ok } from '../../utils/response';
 import { clearSettingsCache } from '../../utils/settings';
+import { uploader, relPath } from '../../config/upload';
 
 const router = Router();
+
+// PUT /api/admin/settings/upload/:key — upload an image and store its path in a setting.
+const UPLOADABLE = new Set(['site_logo', 'site_favicon', 'pwa_icon']);
+
+router.put(
+  '/upload/:key',
+  uploader('site').single('file'),
+  asyncHandler(async (req, res) => {
+    const key = req.params.key;
+    if (!UPLOADABLE.has(key)) throw new HttpError(400, 'This setting is not an image.');
+    if (!req.file) throw new HttpError(422, 'No image uploaded.');
+
+    const value = relPath('site', req.file.filename);
+    await prisma.setting.upsert({ where: { key }, update: { value }, create: { key, value } });
+    await clearSettingsCache();
+    return ok(res, { key, value }, 'Image uploaded.');
+  }),
+);
 
 // GET /api/admin/settings — all settings as a flat key-value object.
 router.get(

@@ -6,6 +6,7 @@ import { Wallet, Menu, Gamepad2 } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
 import { useSettings } from '@/lib/settings';
 import { money } from '@/lib/format';
+import { imageUrl } from '@/lib/config';
 import { ProfileDrawer } from './ProfileDrawer';
 
 export function Navbar() {
@@ -17,9 +18,18 @@ export function Navbar() {
     <header className="sticky top-0 z-40 border-b border-slate-100 bg-white/90 backdrop-blur">
       <nav className="container-page flex h-16 items-center justify-between gap-4">
         <Link href="/" className="flex items-center gap-2 font-extrabold text-primary-dark">
-          <span className="grid h-9 w-9 place-items-center rounded-xl bg-primary text-white">
-            <Gamepad2 size={20} />
-          </span>
+          {get('site_logo') ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={imageUrl(get('site_logo'))}
+              alt={get('site_name', 'MH Game Shop')}
+              className="h-9 w-auto object-contain"
+            />
+          ) : (
+            <span className="grid h-9 w-9 place-items-center rounded-xl bg-primary text-white">
+              <Gamepad2 size={20} />
+            </span>
+          )}
           <span className="text-lg">{get('site_name', 'MH Game Shop')}</span>
         </Link>
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import clsx from 'clsx';
@@ -48,10 +48,18 @@ export function Checkout({ product }: { product: CheckoutProduct }) {
   const [playerId, setPlayerId] = useState('');
   const [nickname, setNickname] = useState<string | null>(null);
   const [checking, setChecking] = useState(false);
-  const [payment, setPayment] = useState<'wallet' | 'uddoktapay'>(
-    Number(user?.balance ?? 0) > 0 ? 'wallet' : 'uddoktapay',
-  );
+  const [payment, setPayment] = useState<'wallet' | 'uddoktapay'>('uddoktapay');
   const [submitting, setSubmitting] = useState(false);
+
+  // Auto-select Wallet once the user loads with a positive balance (user is
+  // fetched async, so the initial state can't rely on it). Manual changes stick.
+  const autoSelected = useRef(false);
+  useEffect(() => {
+    if (!autoSelected.current && user && Number(user.balance) > 0) {
+      setPayment('wallet');
+      autoSelected.current = true;
+    }
+  }, [user]);
 
   const selectedPrice = selection ? Number(selection.price) : 0;
   const typeLabel = product.type.charAt(0).toUpperCase() + product.type.slice(1);
