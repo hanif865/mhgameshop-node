@@ -1,6 +1,6 @@
 /* MH Game Shop service worker — cache-first for static assets,
    network-first for navigations with an offline fallback. */
-const CACHE = 'mhgs-v1';
+const CACHE = 'mhgs-v2';
 const STATIC_ASSETS = ['/', '/offline.html', '/manifest.json', '/icon.svg', '/placeholder.svg'];
 
 self.addEventListener('install', (event) => {

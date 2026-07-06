@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import clsx from 'clsx';
 import {
@@ -30,11 +31,25 @@ export function ProfileDrawer({ open, onClose }: { open: boolean; onClose: () =>
   const { user, logout } = useAuth();
   const router = useRouter();
 
+  // Keep mounted briefly for the close animation, then unmount entirely so the
+  // drawer can never be left visible (robust against any CSS/cache issue).
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    if (open) {
+      setMounted(true);
+    } else {
+      const t = setTimeout(() => setMounted(false), 300);
+      return () => clearTimeout(t);
+    }
+  }, [open]);
+
   async function handleLogout() {
     await logout();
     onClose();
     router.push('/');
   }
+
+  if (!mounted && !open) return null;
 
   return (
     <>
