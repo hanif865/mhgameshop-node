@@ -1,10 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Loader2, Copy, Check } from 'lucide-react';
+import { Loader2, Copy, Check, Gift } from 'lucide-react';
 import { apiGet } from '@/lib/api';
 import { Pagination } from '@/components/ui/Pagination';
 import { useToast } from '@/components/ui/Toast';
+import { useSettings } from '@/lib/settings';
 import { shortDate } from '@/lib/format';
 
 interface CodeOrder {
@@ -17,6 +18,8 @@ interface CodeOrder {
 
 export default function CodesPage() {
   const toast = useToast();
+  const { get } = useSettings();
+  const redeemUrl = get('unipin_redeem_url', 'https://www.unipin.com/');
   const [orders, setOrders] = useState<CodeOrder[]>([]);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -42,7 +45,17 @@ export default function CodesPage() {
 
   return (
     <div>
-      <h1 className="mb-4 text-xl font-extrabold text-slate-800">My Codes</h1>
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <h1 className="text-xl font-extrabold text-slate-800">My Codes</h1>
+        <a
+          href={redeemUrl}
+          target="_blank"
+          rel="noreferrer"
+          className="btn-gold px-4 py-2 text-sm"
+        >
+          <Gift size={16} /> Redeem Code
+        </a>
+      </div>
 
       {loading ? (
         <div className="flex justify-center py-16 text-slate-400">

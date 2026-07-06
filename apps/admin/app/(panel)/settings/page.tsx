@@ -58,6 +58,7 @@ const SECTIONS: Section[] = [
       { key: 'free_fire_server_url', label: 'TopupNet Base URL' },
       { key: 'free_fire_server_api_key', label: 'TopupNet API Key', type: 'password' },
       { key: 'unipin_product_id', label: 'UniPin Product ID (combo)' },
+      { key: 'unipin_redeem_url', label: 'UniPin Redeem URL (My Codes button)' },
     ],
   },
   {
