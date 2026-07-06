@@ -11,6 +11,7 @@ const schema = z.object({
   username: z.string().min(1).max(255),
   password: z.string().min(1).max(255),
   autocode: z.string().min(1).max(255),
+  prefix: z.string().max(255).nullable().optional(),
   shellbalance: z.string().max(255).nullable().optional(),
   tgbotid: z.string().max(255).nullable().optional(),
   status: z.coerce.number().int().min(0).max(1).default(1),

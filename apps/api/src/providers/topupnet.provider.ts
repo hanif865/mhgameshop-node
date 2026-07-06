@@ -112,7 +112,7 @@ export async function placeOrderViaShell(order: any): Promise<void> {
     playerid: String(playerId),
     package: String(pkg),
     url: webhookUrl(),
-    code: process.env.SHELL_CODE || 'shells-prefix',
+    code: shell.prefix || process.env.SHELL_CODE || 'shells-prefix',
     username: shell.username,
     password: shell.password,
     autocode: shell.autocode,

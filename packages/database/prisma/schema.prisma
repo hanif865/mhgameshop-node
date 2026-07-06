@@ -191,6 +191,7 @@ model Shell {
   username     String
   password     String
   autocode     String
+  prefix       String?  // sent as the `code` field in shell topup requests
   shellbalance String?
   tgbotid      String?
   status       Int      @default(1)

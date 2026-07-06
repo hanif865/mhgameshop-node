@@ -14,6 +14,7 @@ interface Shell {
   username: string;
   password: string;
   autocode: string;
+  prefix: string | null;
   shellbalance: string | null;
   tgbotid: string | null;
   status: number;
@@ -24,6 +25,7 @@ const FIELDS: { key: keyof Shell; label: string }[] = [
   { key: 'username', label: 'Username' },
   { key: 'password', label: 'Password' },
   { key: 'autocode', label: 'Auto Code' },
+  { key: 'prefix', label: 'Shell Prefix (sent as "code")' },
   { key: 'shellbalance', label: 'Balance' },
   { key: 'tgbotid', label: 'Telegram Bot ID' },
 ];
