@@ -63,10 +63,10 @@ export function ProfileDrawer({ open, onClose }: { open: boolean; onClose: () =>
       />
       <aside
         className={clsx(
-          'fixed right-0 top-0 z-50 flex h-full w-80 max-w-[85%] flex-col shadow-2xl transition-transform',
+          'fixed right-0 top-0 z-50 flex w-80 max-w-[85%] flex-col shadow-2xl transition-transform',
           open ? 'translate-x-0' : 'translate-x-full',
         )}
-        style={{ backgroundColor: '#ffffff' }}
+        style={{ backgroundColor: '#ffffff', height: '100dvh' }}
       >
         <div className="flex items-center justify-between border-b border-slate-100 p-4">
           <span className="font-bold text-primary-dark">Menu</span>
@@ -76,7 +76,10 @@ export function ProfileDrawer({ open, onClose }: { open: boolean; onClose: () =>
         </div>
 
         {user && (
-          <div className="flex items-center gap-3 border-b border-slate-100 bg-primary/5 p-4">
+          <div
+            className="flex items-center gap-3 border-b border-slate-100 p-4"
+            style={{ backgroundColor: '#ecfdf5' }}
+          >
             <div className="grid h-11 w-11 place-items-center overflow-hidden rounded-full bg-primary text-white font-bold">
               {user.avatar ? (
                 // eslint-disable-next-line @next/next/no-img-element
