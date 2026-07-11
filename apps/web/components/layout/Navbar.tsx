@@ -19,18 +19,21 @@ export function Navbar() {
       <nav className="container-page flex h-16 items-center justify-between gap-4">
         <Link href="/" className="flex items-center gap-2 font-extrabold text-primary-dark">
           {get('site_logo') ? (
+            // Logo already includes the brand name, so no text alongside it.
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={imageUrl(get('site_logo'))}
               alt={get('site_name', 'MH Game Shop')}
-              className="h-9 w-auto object-contain"
+              className="h-10 w-auto object-contain"
             />
           ) : (
-            <span className="grid h-9 w-9 place-items-center rounded-xl bg-primary text-white">
-              <Gamepad2 size={20} />
-            </span>
+            <>
+              <span className="grid h-9 w-9 place-items-center rounded-xl bg-primary text-white">
+                <Gamepad2 size={20} />
+              </span>
+              <span className="text-lg">{get('site_name', 'MH Game Shop')}</span>
+            </>
           )}
-          <span className="text-lg">{get('site_name', 'MH Game Shop')}</span>
         </Link>
 
         <div className="hidden items-center gap-6 text-sm font-medium text-slate-600 md:flex">

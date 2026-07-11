@@ -49,6 +49,8 @@ const SECTIONS: Section[] = [
       { key: 'uddoktapay_enabled', label: 'Enable UddoktaPay', type: 'toggle' },
       { key: 'uddoktapay_api_key', label: 'UddoktaPay API Key', type: 'password' },
       { key: 'uddoktapay_api_url', label: 'UddoktaPay Base URL' },
+      { key: 'wallet_pay_image', label: 'Wallet Pay Image (checkout)', type: 'image' },
+      { key: 'instant_pay_image', label: 'Instant Pay Image (checkout)', type: 'image' },
     ],
   },
   {

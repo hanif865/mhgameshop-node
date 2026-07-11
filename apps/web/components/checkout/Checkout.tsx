@@ -7,6 +7,7 @@ import clsx from 'clsx';
 import { BadgeCheck, Loader2, Wallet, Zap, LogIn, Info, HelpCircle } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
 import { useToast } from '@/components/ui/Toast';
+import { useSettings } from '@/lib/settings';
 import { apiPost } from '@/lib/api';
 import { imageUrl } from '@/lib/config';
 import { money } from '@/lib/format';
@@ -42,6 +43,9 @@ export function Checkout({ product }: { product: CheckoutProduct }) {
   const { user } = useAuth();
   const toast = useToast();
   const router = useRouter();
+  const { get } = useSettings();
+  const walletImage = get('wallet_pay_image');
+  const instantImage = get('instant_pay_image');
 
   const needsPlayerId = product.type !== 'voucher';
   const [selection, setSelection] = useState<Selection>(null);
@@ -225,6 +229,7 @@ export function Checkout({ product }: { product: CheckoutProduct }) {
                 active={payment === 'wallet'}
                 onClick={() => setPayment('wallet')}
                 icon={<Wallet />}
+                image={walletImage}
                 title="Wallet Pay"
                 subtitle={money(user?.balance)}
               />
@@ -232,6 +237,7 @@ export function Checkout({ product }: { product: CheckoutProduct }) {
                 active={payment === 'uddoktapay'}
                 onClick={() => setPayment('uddoktapay')}
                 icon={<Zap />}
+                image={instantImage}
                 title="Instant Pay"
                 subtitle="bKash / Nagad"
               />
@@ -365,17 +371,19 @@ function PackageTile({
   );
 }
 
-/* ── Payment tile: image-style card with corner ribbon ── */
+/* ── Payment tile: uploaded image card (falls back to icon) ── */
 function PaymentTile({
   active,
   onClick,
   icon,
+  image,
   title,
   subtitle,
 }: {
   active: boolean;
   onClick: () => void;
   icon: ReactNode;
+  image?: string;
   title: string;
   subtitle: string;
 }) {
@@ -383,25 +391,21 @@ function PaymentTile({
     <button
       onClick={onClick}
       className={clsx(
-        'relative flex flex-col items-center gap-2 overflow-hidden rounded-xl border p-3 text-center transition',
+        'relative flex flex-col items-center gap-1.5 overflow-hidden rounded-xl border p-2 text-center transition',
         active
-          ? 'border-primary bg-primary/5 ring-2 ring-primary/20'
+          ? 'border-primary bg-primary/5 ring-2 ring-primary/30'
           : 'border-slate-200 bg-white hover:border-primary/50',
       )}
     >
-      <span
-        className={clsx(
-          'absolute left-0 top-0 h-0 w-0 border-r-[18px] border-t-[18px] border-r-transparent',
-          active ? 'border-t-primary' : 'border-t-gold',
-        )}
-      />
-      <span className="grid h-10 w-10 place-items-center rounded-lg bg-primary/10 text-primary-dark">
-        {icon}
-      </span>
-      <div>
-        <p className="text-sm font-semibold text-slate-800">{title}</p>
-        <p className="text-[11px] text-slate-400">{subtitle}</p>
-      </div>
+      {image ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={imageUrl(image)} alt={title} className="h-14 w-full object-contain" />
+      ) : (
+        <span className="grid h-10 w-10 place-items-center rounded-lg bg-primary/10 text-primary-dark">
+          {icon}
+        </span>
+      )}
+      <p className="text-[11px] font-medium text-slate-500">{subtitle}</p>
     </button>
   );
 }

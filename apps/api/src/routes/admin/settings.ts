@@ -9,7 +9,13 @@ import { uploader, relPath } from '../../config/upload';
 const router = Router();
 
 // PUT /api/admin/settings/upload/:key — upload an image and store its path in a setting.
-const UPLOADABLE = new Set(['site_logo', 'site_favicon', 'pwa_icon']);
+const UPLOADABLE = new Set([
+  'site_logo',
+  'site_favicon',
+  'pwa_icon',
+  'wallet_pay_image',
+  'instant_pay_image',
+]);
 
 router.put(
   '/upload/:key',
