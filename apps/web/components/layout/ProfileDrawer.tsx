@@ -97,7 +97,10 @@ export function ProfileDrawer({ open, onClose }: { open: boolean; onClose: () =>
           </div>
         )}
 
-        <nav className="flex-1 space-y-1 overflow-y-auto p-3">
+        <nav
+          className="flex-1 space-y-1 overflow-y-auto p-3"
+          style={{ backgroundColor: '#ffffff' }}
+        >
           {LINKS.map(({ href, label, icon: Icon }) => (
             <Link
               key={href}
@@ -111,7 +114,7 @@ export function ProfileDrawer({ open, onClose }: { open: boolean; onClose: () =>
           ))}
         </nav>
 
-        <div className="border-t border-slate-100 p-3">
+        <div className="border-t border-slate-100 p-3" style={{ backgroundColor: '#ffffff' }}>
           {user ? (
             <button
               onClick={handleLogout}
