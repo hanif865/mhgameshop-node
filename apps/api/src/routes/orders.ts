@@ -56,7 +56,8 @@ router.get(
   requireAuth,
   asyncHandler(async (req, res) => {
     const { page, perPage, skip, take } = parsePagination(req.query);
-    const where = { userId: req.userId! };
+    // Hide unpaid (pending) orders from the user's list.
+    const where = { userId: req.userId!, status: { not: 'pending' as const } };
 
     const [items, total] = await Promise.all([
       prisma.order.findMany({

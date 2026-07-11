@@ -6,6 +6,7 @@ import { Plus, Pencil, Trash2 } from 'lucide-react';
 import { apiGet, apiDelete, pageData } from '@/lib/api';
 import { DataTable, type Column } from '@/components/DataTable';
 import { StatusBadge } from '@/components/StatusBadge';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { imageUrl } from '@/lib/config';
 import { useToast } from '@/components/ui/Toast';
 
@@ -16,6 +17,7 @@ interface Product {
   type: string;
   image: string | null;
   status: number;
+  orderColumn?: number;
   category?: { title: string };
   _count?: { variations: number; comboPackages: number };
 }
@@ -27,6 +29,8 @@ export default function ProductsPage() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [search, setSearch] = useState('');
+  const [deleteId, setDeleteId] = useState<number | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   async function load() {
     setLoading(true);
@@ -42,11 +46,14 @@ export default function ProductsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, search]);
 
-  async function remove(id: number) {
-    if (!confirm('Delete this product?')) return;
-    const res = await apiDelete(`/api/admin/products/${id}`);
+  async function confirmDelete() {
+    if (deleteId === null) return;
+    setDeleting(true);
+    const res = await apiDelete(`/api/admin/products/${deleteId}`);
+    setDeleting(false);
     if (res.success) {
       toast.success('Deleted.');
+      setDeleteId(null);
       load();
     } else toast.error(res.message || 'Delete failed.');
   }
@@ -69,6 +76,7 @@ export default function ProductsPage() {
     { key: 'category', label: 'Category', render: (r) => r.category?.title ?? '—' },
     { key: 'type', label: 'Type', render: (r) => <span className="capitalize">{r.type}</span> },
     { key: 'variations', label: 'Variations', render: (r) => r._count?.variations ?? 0 },
+    { key: 'order', label: 'Order', render: (r) => r.orderColumn ?? 0 },
     { key: 'status', label: 'Status', render: (r) => <StatusBadge status={r.status} /> },
     {
       key: 'actions',
@@ -78,7 +86,7 @@ export default function ProductsPage() {
           <Link href={`/products/${r.id}/edit`} className="btn-ghost px-2 py-1">
             <Pencil size={14} />
           </Link>
-          <button onClick={() => remove(r.id)} className="btn-danger px-2 py-1">
+          <button onClick={() => setDeleteId(r.id)} className="btn-danger px-2 py-1">
             <Trash2 size={14} />
           </button>
         </div>
@@ -103,6 +111,15 @@ export default function ProductsPage() {
         totalPages={totalPages}
         onPageChange={setPage}
         search={{ value: search, onChange: (v) => { setPage(1); setSearch(v); }, placeholder: 'Search products…' }}
+      />
+
+      <ConfirmDialog
+        open={deleteId !== null}
+        title="Delete product?"
+        message="This will permanently delete the product and its variations. This action cannot be undone."
+        loading={deleting}
+        onConfirm={confirmDelete}
+        onClose={() => setDeleteId(null)}
       />
     </div>
   );

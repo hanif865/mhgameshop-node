@@ -7,7 +7,7 @@ import { ProductCard, type ProductLite } from '@/components/home/ProductCard';
 import { LatestOrders } from '@/components/home/LatestOrders';
 
 interface Product extends ProductLite {
-  category: { id: number; title: string } | null;
+  category: { id: number; title: string; orderColumn?: number } | null;
 }
 
 // Rendered on-demand (not prerendered at build) so it always shows live data
@@ -25,13 +25,20 @@ export default async function HomePage() {
   const sliders = slidersRes.data ?? [];
   const latestOrders = ordersRes.data ?? [];
 
-  // Group products by category, preserving API order.
-  const groups = new Map<string, { title: string; items: Product[] }>();
+  // Group products by category, then order the groups by the category's
+  // order_column (managed from the admin panel).
+  const groups = new Map<string, { title: string; order: number; items: Product[] }>();
   for (const p of products) {
     const key = String(p.category?.id ?? 0);
-    if (!groups.has(key)) groups.set(key, { title: p.category?.title ?? 'Products', items: [] });
+    if (!groups.has(key))
+      groups.set(key, {
+        title: p.category?.title ?? 'Products',
+        order: p.category?.orderColumn ?? 999,
+        items: [],
+      });
     groups.get(key)!.items.push(p);
   }
+  const orderedGroups = [...groups.values()].sort((a, b) => a.order - b.order);
 
   return (
     <div>
@@ -41,7 +48,7 @@ export default async function HomePage() {
         <HeroSlider slides={sliders} />
 
         <div id="products" className="space-y-8">
-          {[...groups.values()].map((group) => (
+          {orderedGroups.map((group) => (
             <section key={group.title}>
               <h2 className="mb-4 flex items-center gap-2 text-lg font-bold text-slate-800">
                 <span className="h-5 w-1.5 rounded-full bg-gold" />

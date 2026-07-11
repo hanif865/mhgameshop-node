@@ -32,9 +32,6 @@ export function ProductCard({ product }: { product: ProductLite }) {
             STOCK OUT
           </span>
         )}
-        <span className="absolute right-2 top-2 rounded-md bg-gold px-2 py-0.5 text-[10px] font-bold uppercase text-white">
-          {product.type}
-        </span>
       </div>
       <div className="p-2.5">
         <p className="line-clamp-2 text-center text-xs font-semibold text-slate-700 sm:text-sm">

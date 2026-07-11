@@ -61,7 +61,8 @@ router.get(
   '/orders',
   asyncHandler(async (req, res) => {
     const { page, perPage, skip, take } = parsePagination(req.query);
-    const where = { userId: req.userId! };
+    // Hide orders that haven't been paid yet (pending gateway payment).
+    const where = { userId: req.userId!, status: { not: 'pending' as const } };
     const [items, total] = await Promise.all([
       prisma.order.findMany({
         where,

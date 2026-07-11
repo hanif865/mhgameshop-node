@@ -166,7 +166,6 @@ export function Checkout({ product }: { product: CheckoutProduct }) {
                   key={`c-${c.id}`}
                   title={c.title}
                   price={c.price}
-                  combo
                   outOfStock={c.stock <= 0}
                   active={selection?.kind === 'combo' && selection.id === c.id}
                   onClick={() =>
@@ -335,14 +334,12 @@ function PackageTile({
   price,
   active,
   outOfStock,
-  combo,
   onClick,
 }: {
   title: string;
   price: string;
   active: boolean;
   outOfStock?: boolean;
-  combo?: boolean;
   onClick: () => void;
 }) {
   return (
@@ -357,11 +354,6 @@ function PackageTile({
         outOfStock && 'cursor-not-allowed opacity-50',
       )}
     >
-      {combo && (
-        <span className="absolute right-1.5 top-1.5 rounded bg-gold px-1.5 py-0.5 text-[8px] font-bold text-white">
-          COMBO
-        </span>
-      )}
       {outOfStock && (
         <span className="absolute left-1.5 top-1.5 rounded bg-red-600 px-1.5 py-0.5 text-[8px] font-bold text-white">
           STOCK OUT
