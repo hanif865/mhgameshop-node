@@ -31,10 +31,13 @@ export interface UddoktaVerifyResult {
 async function creds() {
   const s = await gs();
   const apiKey = (s.str('uddoktapay_api_key') || env.UDDOKTAPAY_API_KEY || '').trim();
-  const baseUrl = (s.str('uddoktapay_api_url') || env.UDDOKTAPAY_BASE_URL || '').replace(
+  let baseUrl = (s.str('uddoktapay_api_url') || env.UDDOKTAPAY_BASE_URL || '').replace(
     /\/+$/,
     '',
   );
+  // Endpoints are {domain}/api/checkout-v2 & /api/verify-payment. Accept the
+  // URL with or without the trailing /api and normalize it.
+  if (baseUrl && !/\/api$/i.test(baseUrl)) baseUrl += '/api';
   return { apiKey, baseUrl };
 }
 

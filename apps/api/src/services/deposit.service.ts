@@ -26,7 +26,7 @@ export async function initiateDeposit(
     email: user.email,
     amount: deposit.amount,
     metadata: { deposit_id: deposit.id, kind: 'deposit' },
-    redirect_url: `${env.WEB_URL}/user/add-funds?status=success`,
+    redirect_url: `${env.APP_URL}/api/webhook/uddoktapay/callback`,
     cancel_url: `${env.WEB_URL}/user/add-funds?status=cancelled`,
     webhook_url: `${env.APP_URL}/api/webhook/uddoktapay`,
   });

@@ -259,7 +259,7 @@ model ComboPackageVoucher {
 model Order {
   id              Int         @id @default(autoincrement())
   userId          Int         @map("user_id")
-  productId       Int         @map("product_id")
+  productId       Int?        @map("product_id")
   variationId     Int?        @map("variation_id")
   comboPackageId  Int?        @map("combo_package_id")
   quantity        Int         @default(1)
@@ -276,9 +276,9 @@ model Order {
   updatedAt       DateTime    @updatedAt @map("updated_at")
 
   user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  product         Product          @relation(fields: [productId], references: [id])
-  variation       Variation?       @relation(fields: [variationId], references: [id])
-  comboPackage    ComboPackage?    @relation(fields: [comboPackageId], references: [id])
+  product         Product?         @relation(fields: [productId], references: [id], onDelete: SetNull)
+  variation       Variation?       @relation(fields: [variationId], references: [id], onDelete: SetNull)
+  comboPackage    ComboPackage?    @relation(fields: [comboPackageId], references: [id], onDelete: SetNull)
   transactions    Transaction[]
   vouchers        Voucher[]
   autoVouchers    AutoVoucher[]

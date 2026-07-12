@@ -145,7 +145,7 @@ async function finalizePayment(
     email: order.user?.email ?? 'customer@email.com',
     amount: order.amount,
     metadata: { order_id: order.id, track_id: order.trackId, kind: 'order' },
-    redirect_url: `${env.WEB_URL}/user/orders?status=success`,
+    redirect_url: `${env.APP_URL}/api/webhook/uddoktapay/callback`,
     cancel_url: `${env.WEB_URL}/user/orders?status=cancelled`,
     webhook_url: `${env.APP_URL}/api/webhook/uddoktapay`,
   });

@@ -65,6 +65,12 @@ export function errorHandler(
     if (err.code === 'P2025') {
       return res.status(404).json({ success: false, message: 'Record not found.' });
     }
+    if (err.code === 'P2003') {
+      return res.status(409).json({
+        success: false,
+        message: 'Cannot delete — this item is still referenced by other records.',
+      });
+    }
   }
 
   const message = err instanceof Error ? err.message : 'Internal server error.';

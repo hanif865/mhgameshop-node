@@ -101,7 +101,7 @@ export function ProfileDrawer({ open, onClose }: { open: boolean; onClose: () =>
         )}
 
         <nav
-          className="flex-1 space-y-1 overflow-y-auto p-3"
+          className="space-y-1 overflow-y-auto p-3"
           style={{ backgroundColor: '#ffffff' }}
         >
           {LINKS.map(({ href, label, icon: Icon }) => (
