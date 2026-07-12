@@ -5,11 +5,12 @@ export function money(value: number | string | null | undefined): string {
 
 export function formatDate(value: string | Date | null | undefined): string {
   if (!value) return '-';
-  return new Date(value).toLocaleString('en-GB', {
+  return new Date(value).toLocaleString('en-US', {
     day: '2-digit',
     month: 'short',
     year: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
+    hour12: true,
   });
 }

@@ -6,12 +6,13 @@ export function money(value: number | string | null | undefined): string {
 export function formatDate(value: string | Date | null | undefined): string {
   if (!value) return '-';
   const d = new Date(value);
-  return d.toLocaleString('en-GB', {
+  return d.toLocaleString('en-US', {
     day: '2-digit',
     month: 'short',
     year: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
+    hour12: true,
   });
 }
 

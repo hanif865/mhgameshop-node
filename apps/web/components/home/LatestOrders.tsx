@@ -40,7 +40,7 @@ export function LatestOrders({ orders }: { orders: LatestOrder[] }) {
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-semibold text-slate-800">{o.user}</p>
               <p className="truncate text-xs text-slate-500">
-                {o.title} · <span className="font-bold text-gold">{money(o.amount)}</span>
+                {o.title} · <span className="font-bold text-primary-dark">{money(o.amount)}</span>
               </p>
             </div>
 
