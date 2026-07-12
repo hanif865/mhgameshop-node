@@ -11,9 +11,8 @@ www.mhgameshop.com {
 mhgameshop.com {
 	encode gzip
 	# UddoktaPay is licensed to this domain, so its redirect/webhook must be
-	# here — proxy those paths to the API (rewrites to /api/webhook/uddoktapay*).
+	# here — proxy those paths straight to the API (which also serves them).
 	handle /uddoktapay* {
-		rewrite * /api/webhook{path}
 		reverse_proxy api:4000
 	}
 	handle {

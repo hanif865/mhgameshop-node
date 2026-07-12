@@ -68,6 +68,9 @@ app.use('/api/products', productRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/deposits', depositRoutes);
 app.use('/api/webhook', webhookRoutes);
+// Also served at root so the licensed domain (mhgameshop.com/uddoktapay*) can
+// reach them via the Caddy proxy.
+app.use('/', webhookRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/uid-checker', uidCheckerRoutes);
 app.use('/api/admin', adminRoutes);
