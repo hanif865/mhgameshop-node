@@ -26,9 +26,10 @@ export async function initiateDeposit(
     email: user.email,
     amount: deposit.amount,
     metadata: { deposit_id: deposit.id, kind: 'deposit' },
-    redirect_url: `${env.APP_URL}/api/webhook/uddoktapay/callback`,
+    // UddoktaPay-licensed domain (Caddy proxies /uddoktapay* to the API).
+    redirect_url: `${env.WEB_URL}/uddoktapay/callback`,
     cancel_url: `${env.WEB_URL}/user/add-funds?status=cancelled`,
-    webhook_url: `${env.APP_URL}/api/webhook/uddoktapay`,
+    webhook_url: `${env.WEB_URL}/uddoktapay`,
   });
 
   return { deposit_id: deposit.id, redirect_url: paymentUrl };

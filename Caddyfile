@@ -10,7 +10,15 @@ www.mhgameshop.com {
 # Storefront
 mhgameshop.com {
 	encode gzip
-	reverse_proxy web:3000
+	# UddoktaPay is licensed to this domain, so its redirect/webhook must be
+	# here — proxy those paths to the API (rewrites to /api/webhook/uddoktapay*).
+	handle /uddoktapay* {
+		rewrite * /api/webhook{path}
+		reverse_proxy api:4000
+	}
+	handle {
+		reverse_proxy web:3000
+	}
 }
 
 # Admin panel

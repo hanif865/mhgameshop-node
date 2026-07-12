@@ -145,9 +145,11 @@ async function finalizePayment(
     email: order.user?.email ?? 'customer@email.com',
     amount: order.amount,
     metadata: { order_id: order.id, track_id: order.trackId, kind: 'order' },
-    redirect_url: `${env.APP_URL}/api/webhook/uddoktapay/callback`,
+    // Must be on the UddoktaPay-licensed domain (mhgameshop.com); Caddy proxies
+    // /uddoktapay* to the API.
+    redirect_url: `${env.WEB_URL}/uddoktapay/callback`,
     cancel_url: `${env.WEB_URL}/user/orders?status=cancelled`,
-    webhook_url: `${env.APP_URL}/api/webhook/uddoktapay`,
+    webhook_url: `${env.WEB_URL}/uddoktapay`,
   });
 
   return { order_id: order.id, redirect_url: paymentUrl };
