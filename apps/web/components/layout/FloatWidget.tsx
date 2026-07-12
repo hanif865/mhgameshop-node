@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { MessageCircle, Send, Facebook, Phone, Plus, X } from 'lucide-react';
+import { MessageCircle, Send, Facebook, Phone, X } from 'lucide-react';
 import clsx from 'clsx';
 import { useSettings } from '@/lib/settings';
 
@@ -54,7 +54,7 @@ export function FloatWidget() {
         className="grid h-14 w-14 place-items-center rounded-full bg-primary text-white shadow-xl transition hover:bg-primary-dark"
         aria-label="Contact"
       >
-        {open ? <X /> : <Plus />}
+        {open ? <X /> : <Phone />}
       </button>
     </div>
   );
