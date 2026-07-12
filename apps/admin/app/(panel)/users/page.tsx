@@ -28,7 +28,13 @@ export default function UsersPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [search, setSearch] = useState('');
   const [editing, setEditing] = useState<User | null>(null);
+  const [newPassword, setNewPassword] = useState('');
   const [saving, setSaving] = useState(false);
+
+  function openEdit(u: User | null) {
+    setNewPassword('');
+    setEditing(u);
+  }
 
   async function load() {
     setLoading(true);
@@ -51,6 +57,7 @@ export default function UsersPage() {
       balance: Number(editing.balance),
       status: editing.status,
       role: editing.role,
+      ...(newPassword ? { password: newPassword } : {}),
     });
     setSaving(false);
     if (res.success) {
@@ -81,7 +88,7 @@ export default function UsersPage() {
       key: 'actions',
       label: '',
       render: (r) => (
-        <button onClick={() => setEditing(r)} className="btn-ghost px-2 py-1">
+        <button onClick={() => openEdit(r)} className="btn-ghost px-2 py-1">
           <Pencil size={14} />
         </button>
       ),
@@ -108,7 +115,7 @@ export default function UsersPage() {
         }}
       />
 
-      <Modal open={!!editing} onClose={() => setEditing(null)} title="Edit User">
+      <Modal open={!!editing} onClose={() => openEdit(null)} title="Edit User">
         {editing && (
           <div className="space-y-3">
             <p className="text-sm text-slate-500">{editing.email}</p>
@@ -146,8 +153,21 @@ export default function UsersPage() {
                 </select>
               </div>
             </div>
+            <div>
+              <label className="label">Set / Reset Password</label>
+              <input
+                type="text"
+                className="input"
+                placeholder="Leave blank to keep current password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+              />
+              <p className="mt-1 text-xs text-slate-400">
+                Set a password so this user (e.g. a new admin) can log in with email + password.
+              </p>
+            </div>
             <div className="flex justify-end gap-2">
-              <button onClick={() => setEditing(null)} className="btn-ghost">
+              <button onClick={() => openEdit(null)} className="btn-ghost">
                 Cancel
               </button>
               <button onClick={save} disabled={saving} className="btn-primary">

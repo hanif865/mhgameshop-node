@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
+import bcrypt from 'bcryptjs';
 import { prisma } from '../../config/database';
 import { asyncHandler } from '../../middleware/error';
 import { ok, paginated, parsePagination } from '../../utils/response';
@@ -42,11 +43,12 @@ router.get(
   }),
 );
 
-// PUT /api/admin/users/:id — balance adjust / status / role
+// PUT /api/admin/users/:id — balance adjust / status / role / set password
 const updateSchema = z.object({
   balance: z.coerce.number().nonnegative().optional(),
   status: z.coerce.number().int().min(0).max(1).optional(),
   role: z.enum(['user', 'admin', 'reseller']).optional(),
+  password: z.string().min(6).max(100).optional(),
 });
 
 router.put(
@@ -57,6 +59,7 @@ router.put(
     if (parsed.balance !== undefined) data.balance = parsed.balance.toFixed(2);
     if (parsed.status !== undefined) data.status = parsed.status;
     if (parsed.role !== undefined) data.role = parsed.role;
+    if (parsed.password) data.password = await bcrypt.hash(parsed.password, 10);
 
     const user = await prisma.user.update({ where: { id: Number(req.params.id) }, data });
     return ok(res, publicUser(user), 'User updated.');
