@@ -20,7 +20,15 @@ export interface ProductData {
   orderColumn?: number;
   status?: number;
   image?: string | null;
+  formFields?: any[] | null;
 }
+
+const FORM_FIELDS_EXAMPLE = `[
+  {"key":"account_type","label":"Account Type","type":"select","options":["Facebook","Google","VK","Twitter"]},
+  {"key":"account_id","label":"Your Facebook Id / Number","type":"text","placeholder":"Enter your Facebook Id / Number"},
+  {"key":"password","label":"Password","type":"password","placeholder":"Enter Password"},
+  {"key":"backup_code","label":"Backup Code / Your WhatsApp Number","type":"text","placeholder":"Backup Code / WhatsApp Number"}
+]`;
 
 export function ProductForm({ initial }: { initial?: ProductData }) {
   const toast = useToast();
@@ -31,6 +39,9 @@ export function ProductForm({ initial }: { initial?: ProductData }) {
   const [categories, setCategories] = useState<{ id: number; title: string }[]>([]);
   const [shells, setShells] = useState<{ id: number; name: string }[]>([]);
   const [saving, setSaving] = useState(false);
+  const [formFieldsText, setFormFieldsText] = useState(
+    initial?.formFields ? JSON.stringify(initial.formFields, null, 2) : '',
+  );
 
   useEffect(() => {
     apiGet<any[]>('/api/admin/categories').then((r) => setCategories(r.data ?? []));
@@ -45,6 +56,16 @@ export function ProductForm({ initial }: { initial?: ProductData }) {
     if (!form.title || !form.slug || !form.categoryId) {
       return toast.error('Title, slug and category are required.');
     }
+    let formFields: any[] = [];
+    if (formFieldsText.trim()) {
+      try {
+        formFields = JSON.parse(formFieldsText);
+        if (!Array.isArray(formFields)) throw new Error();
+      } catch {
+        return toast.error('Custom Fields must be valid JSON (an array).');
+      }
+    }
+
     setSaving(true);
     const body = {
       categoryId: form.categoryId,
@@ -53,6 +74,7 @@ export function ProductForm({ initial }: { initial?: ProductData }) {
       type: form.type,
       description: form.description ?? null,
       shellId: form.shellId ?? null,
+      formFields,
       orderColumn: form.orderColumn ?? 0,
       status: form.status ?? 1,
     };
@@ -147,6 +169,23 @@ export function ProductForm({ initial }: { initial?: ProductData }) {
           value={form.description ?? ''}
           onChange={(e) => set('description', e.target.value)}
         />
+      </div>
+
+      <div>
+        <label className="label">Custom Input Fields (manual topup) — JSON, optional</label>
+        <textarea
+          rows={6}
+          className="input font-mono text-xs"
+          placeholder={FORM_FIELDS_EXAMPLE}
+          value={formFieldsText}
+          onChange={(e) => setFormFieldsText(e.target.value)}
+        />
+        <p className="mt-1 text-xs text-slate-400">
+          Leave blank for the default Player ID field. For login-based manual topup
+          (e.g. Facebook ID + password + backup code) paste a JSON array of fields —
+          type can be <code>text</code>, <code>password</code>, or <code>select</code>{' '}
+          (with an <code>options</code> array).
+        </p>
       </div>
 
       <div>

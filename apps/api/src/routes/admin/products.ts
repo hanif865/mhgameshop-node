@@ -15,6 +15,7 @@ const schema = z.object({
   description: z.string().nullable().optional(),
   image: z.string().max(1024).nullable().optional(),
   shellId: z.coerce.number().int().nullable().optional(),
+  formFields: z.array(z.record(z.any())).optional(),
   orderColumn: z.coerce.number().int().default(0),
   status: z.coerce.number().int().min(0).max(1).default(1),
 });

@@ -33,8 +33,18 @@ export interface CheckoutProduct {
   image: string | null;
   description: string | null;
   category?: { title: string } | null;
+  formFields?: FormField[] | null;
   variations: Variation[];
   comboPackages: Combo[];
+}
+
+interface FormField {
+  key: string;
+  label: string;
+  type?: 'text' | 'password' | 'select' | 'number';
+  placeholder?: string;
+  options?: string[];
+  required?: boolean;
 }
 
 type Selection = { kind: 'variation' | 'combo'; id: number; price: string; stock: number } | null;
@@ -47,9 +57,15 @@ export function Checkout({ product }: { product: CheckoutProduct }) {
   const walletImage = get('wallet_pay_image');
   const instantImage = get('instant_pay_image');
 
-  const needsPlayerId = product.type !== 'voucher';
+  const customFields = Array.isArray(product.formFields) ? product.formFields : [];
+  const hasCustomFields = customFields.length > 0;
+  const isVoucher = product.type === 'voucher';
+  const needsPlayerId = !isVoucher && !hasCustomFields;
+
   const [selection, setSelection] = useState<Selection>(null);
   const [playerId, setPlayerId] = useState('');
+  const [custom, setCustom] = useState<Record<string, string>>({});
+  const [quantity, setQuantity] = useState(1);
   const [nickname, setNickname] = useState<string | null>(null);
   const [checking, setChecking] = useState(false);
   const [payment, setPayment] = useState<'wallet' | 'uddoktapay'>('uddoktapay');
@@ -65,7 +81,14 @@ export function Checkout({ product }: { product: CheckoutProduct }) {
     }
   }, [user]);
 
-  const selectedPrice = selection ? Number(selection.price) : 0;
+  // Reset quantity when the selected package changes.
+  useEffect(() => {
+    setQuantity(1);
+  }, [selection?.id, selection?.kind]);
+
+  const qty = isVoucher ? quantity : 1;
+  const selectedPrice = (selection ? Number(selection.price) : 0) * qty;
+  const maxQty = isVoucher && selection ? Math.max(1, selection.stock) : 99;
   const typeLabel = product.type.charAt(0).toUpperCase() + product.type.slice(1);
 
   const variationValue = useMemo(() => {
@@ -102,12 +125,25 @@ export function Checkout({ product }: { product: CheckoutProduct }) {
     if (!selection) return toast.error('অনুগ্রহ করে একটি প্যাকেজ নির্বাচন করুন।');
     if (needsPlayerId && !playerId.trim()) return toast.error('আপনার Player ID দিন।');
 
+    // Build account_info from the relevant input mode.
+    let accountInfo: Record<string, string> | null = null;
+    if (hasCustomFields) {
+      for (const f of customFields) {
+        const v = (custom[f.key] ?? '').trim();
+        if (f.required !== false && !v) return toast.error(`${f.label} দিন।`);
+      }
+      accountInfo = { ...custom };
+    } else if (needsPlayerId) {
+      accountInfo = { player_id: playerId.trim() };
+    }
+
     setSubmitting(true);
     try {
       const res = await apiPost<{ order_id: number; redirect_url?: string }>('/api/orders', {
         variation_id: variationValue,
         payment_method: payment,
-        account_info: needsPlayerId ? { player_id: playerId.trim() } : null,
+        account_info: accountInfo,
+        quantity: qty,
         idempotency_key: crypto.randomUUID(),
       });
       if (!res.success) {
@@ -190,6 +226,46 @@ export function Checkout({ product }: { product: CheckoutProduct }) {
 
         {/* ── RIGHT: Account Info + Payment ── */}
         <div className="space-y-5">
+          {/* Custom login-based fields (manual topup) */}
+          {hasCustomFields && (
+            <Section num={2} title="Account Info">
+              <div className="space-y-3">
+                {customFields.map((f) => (
+                  <div key={f.key}>
+                    <label className="mb-1 block text-sm font-medium text-slate-600">
+                      {f.label}
+                    </label>
+                    {f.type === 'select' ? (
+                      <select
+                        className="input"
+                        value={custom[f.key] ?? ''}
+                        onChange={(e) => setCustom((c) => ({ ...c, [f.key]: e.target.value }))}
+                      >
+                        <option value="">Select…</option>
+                        {(f.options ?? []).map((o) => (
+                          <option key={o} value={o}>
+                            {o}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <input
+                        className="input"
+                        type={
+                          f.type === 'password' ? 'password' : f.type === 'number' ? 'number' : 'text'
+                        }
+                        placeholder={f.placeholder ?? ''}
+                        value={custom[f.key] ?? ''}
+                        onChange={(e) => setCustom((c) => ({ ...c, [f.key]: e.target.value }))}
+                      />
+                    )}
+                  </div>
+                ))}
+              </div>
+            </Section>
+          )}
+
+          {/* Default Player ID + UID checker */}
           {needsPlayerId && (
             <Section num={2} title="Account Info">
               <label className="mb-1 block text-sm font-medium text-slate-600">
@@ -223,7 +299,31 @@ export function Checkout({ product }: { product: CheckoutProduct }) {
             </Section>
           )}
 
-          <Section num={needsPlayerId ? 3 : 2} title="Select one option">
+          {/* Quantity for voucher products */}
+          {isVoucher && (
+            <Section num={2} title="Quantity">
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                  className="grid h-10 w-10 place-items-center rounded-lg border border-slate-200 text-lg font-bold text-slate-600 hover:border-primary"
+                >
+                  −
+                </button>
+                <span className="w-12 text-center text-lg font-bold text-slate-800">{quantity}</span>
+                <button
+                  onClick={() => setQuantity((q) => Math.min(maxQty, q + 1))}
+                  className="grid h-10 w-10 place-items-center rounded-lg border border-slate-200 text-lg font-bold text-slate-600 hover:border-primary"
+                >
+                  +
+                </button>
+                {selection && (
+                  <span className="text-xs text-slate-400">In stock: {selection.stock}</span>
+                )}
+              </div>
+            </Section>
+          )}
+
+          <Section num={3} title="Select one option">
             <div className="grid grid-cols-2 gap-3">
               <PaymentTile
                 active={payment === 'wallet'}

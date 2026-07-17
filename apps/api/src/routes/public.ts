@@ -60,6 +60,7 @@ router.get(
 router.get(
   '/home/latest-orders',
   asyncHandler(async (_req, res) => {
+    const items = await remember('mhgs:cache:latest-orders', 15, async () => {
     const orders = await prisma.order.findMany({
       where: { status: { in: ['completed', 'processing', 'autoprocessing'] } },
       orderBy: { id: 'desc' },
@@ -76,16 +77,17 @@ router.get(
       },
     });
 
-    const items = orders.map((o) => ({
-      id: o.id,
-      status: o.status,
-      amount: o.amount,
-      createdAt: o.createdAt,
-      title: o.variation?.title ?? o.comboPackage?.title ?? o.product?.title ?? 'Order',
-      productImage: o.product?.image ?? null,
-      user: o.user?.name ?? 'User',
-      avatar: o.user?.avatar ?? o.user?.googleAvatar ?? null,
-    }));
+      return orders.map((o) => ({
+        id: o.id,
+        status: o.status,
+        amount: o.amount,
+        createdAt: o.createdAt,
+        title: o.variation?.title ?? o.comboPackage?.title ?? o.product?.title ?? 'Order',
+        productImage: o.product?.image ?? null,
+        user: o.user?.name ?? 'User',
+        avatar: o.user?.avatar ?? o.user?.googleAvatar ?? null,
+      }));
+    });
     return ok(res, items);
   }),
 );

@@ -18,7 +18,7 @@ export default async function HomePage() {
   const [productsRes, slidersRes, ordersRes] = await Promise.all([
     apiGet<Product[]>('/api/products', 60),
     apiGet<any[]>('/api/sliders', 60),
-    apiGet<any[]>('/api/home/latest-orders', 30),
+    apiGet<any[]>('/api/home/latest-orders', 15),
   ]);
 
   const products = productsRes.data ?? [];
@@ -50,7 +50,7 @@ export default async function HomePage() {
         <div id="products" className="space-y-8">
           {orderedGroups.map((group) => (
             <section key={group.title}>
-              <h2 className="mb-4 flex items-center gap-2 text-lg font-bold text-slate-800">
+              <h2 className="mb-4 flex items-center justify-center gap-2 text-lg font-bold text-slate-800">
                 <span className="h-5 w-1.5 rounded-full bg-gold" />
                 {group.title}
               </h2>

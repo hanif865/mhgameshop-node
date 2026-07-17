@@ -111,6 +111,8 @@ model Product {
   image       String?
   description String?     @db.Text
   shellId     Int?        @map("shell_id")
+  // Custom checkout input fields (manual topup): [{key,label,type,placeholder,options?}]
+  formFields  Json?       @map("form_fields")
   orderColumn Int         @default(0) @map("order_column")
   status      Int         @default(1)
   createdAt   DateTime    @default(now()) @map("created_at")
