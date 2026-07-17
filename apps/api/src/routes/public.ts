@@ -6,21 +6,26 @@ import { remember, CACHE_KEYS } from '../utils/cache';
 
 const router = Router();
 
-// Keys that must never be exposed publicly.
-const SENSITIVE = ['key', 'secret', 'password', 'token', 'smtp', 'client_id', 'autocode'];
+// Whitelist — ONLY these settings are exposed publicly. Everything else
+// (provider URLs, API config, telegram, smtp, etc.) stays private.
+const PUBLIC_SETTING_KEYS = new Set([
+  'site_name', 'site_title', 'site_description', 'site_logo', 'site_favicon', 'home_title',
+  'pwa_name', 'pwa_short_name', 'pwa_icon',
+  'enable_notice', 'notice_title', 'notice_content', 'notice_background_color', 'notice_font_color',
+  'facebook_url', 'instagram_url', 'youtube_url', 'whatsapp_number', 'telegram_url',
+  'messenger_url', 'support_time',
+  'wallet', 'uddoktapay_enabled', 'wallet_pay_image', 'instant_pay_image', 'unipin_redeem_url',
+  'maintenance_mode', 'maintenance_message',
+  'meta_title', 'meta_description', 'meta_keywords',
+]);
 
-function isSensitive(key: string): boolean {
-  const k = key.toLowerCase();
-  return SENSITIVE.some((s) => k.includes(s));
-}
-
-// GET /api/settings — public, non-sensitive settings as a key-value object.
+// GET /api/settings — only whitelisted, safe-to-expose settings.
 router.get(
   '/settings',
   asyncHandler(async (_req, res) => {
     const rows = await prisma.setting.findMany();
     const obj: Record<string, string | null> = {};
-    for (const r of rows) if (!isSensitive(r.key)) obj[r.key] = r.value;
+    for (const r of rows) if (PUBLIC_SETTING_KEYS.has(r.key)) obj[r.key] = r.value;
     return ok(res, obj);
   }),
 );
