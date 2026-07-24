@@ -31,3 +31,38 @@ api.mhgameshop.com {
 	encode gzip
 	reverse_proxy api:4000
 }
+
+# Dizara CRM (standalone compose project; container joins this network)
+crm.femorashop.com {
+	encode gzip
+	reverse_proxy dizara-crm:3001
+}
+
+# SafeCommerce — append this block to /opt/mhgameshop/Caddyfile on the VPS,
+# then validate + graceful reload (see deploy/README.md). DNS: safecommerce.net
+# (and later app/tenant subdomains) must A-record to the VPS first.
+
+safecommerce.net {
+	encode gzip
+
+	# API + WebSocket → api container
+	@api path /api/* /ws
+	handle @api {
+		reverse_proxy safecommerce-api:4000
+	}
+
+	# Everything else → static SPA (nginx)
+	handle {
+		reverse_proxy safecommerce-web:80
+	}
+}
+
+auto.mhgameshop.com {
+	encode gzip
+	reverse_proxy 172.18.0.1:3000
+}
+
+quiz.mhgameshop.com {
+	encode gzip
+	reverse_proxy 172.18.0.1:4100
+}

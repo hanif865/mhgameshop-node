@@ -41,7 +41,8 @@ export const apiPost = <T = unknown>(path: string, body?: unknown) =>
   request<T>(path, { method: 'POST', body: body ? JSON.stringify(body) : undefined });
 export const apiPut = <T = unknown>(path: string, body?: unknown) =>
   request<T>(path, { method: 'PUT', body: body ? JSON.stringify(body) : undefined });
-export const apiDelete = <T = unknown>(path: string) => request<T>(path, { method: 'DELETE' });
+export const apiDelete = <T = unknown>(path: string, body?: unknown) =>
+  request<T>(path, { method: 'DELETE', body: body ? JSON.stringify(body) : undefined });
 
 export async function apiUpload<T = unknown>(path: string, form: FormData): Promise<ApiResult<T>> {
   const res = await fetch(`${API_URL}${path}`, {

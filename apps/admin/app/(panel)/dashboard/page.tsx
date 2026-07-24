@@ -1,38 +1,74 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { ShoppingCart, DollarSign, Users, Clock } from 'lucide-react';
+import { ShoppingCart, DollarSign, Clock, Wifi, Eye } from 'lucide-react';
 import { apiGet } from '@/lib/api';
 import { money, formatDate } from '@/lib/format';
 import { StatusBadge } from '@/components/StatusBadge';
+import { useAdminSocket } from '@/lib/socket';
 
 interface Dashboard {
   orders: { today: number; week: number; month: number };
   revenue: { today: string; month: string; monthProfit: string };
-  users: { total: number; newToday: number };
+  users: { total: number; newToday: number; online: number };
   pendingOrders: number;
   recentOrders: any[];
 }
 
+interface OnlineUser {
+  id: number;
+  name: string;
+  email: string;
+  role: string;
+  balance: number;
+}
+
 export default function DashboardPage() {
   const [data, setData] = useState<Dashboard | null>(null);
+  const [online, setOnline] = useState<number | null>(null);
+  const [guests, setGuests] = useState<number | null>(null);
+  const [pending, setPending] = useState<number | null>(null);
+  const [who, setWho] = useState<OnlineUser[]>([]);
+
+  async function loadOnline() {
+    const res = await apiGet<{ count: number; guests: number; users: OnlineUser[] }>(
+      '/api/admin/dashboard/online',
+    );
+    if (res.data) {
+      setOnline(res.data.count);
+      setGuests(res.data.guests);
+      setWho(res.data.users);
+    }
+  }
 
   useEffect(() => {
     apiGet<Dashboard>('/api/admin/dashboard').then((res) => setData(res.data ?? null));
+    loadOnline();
   }, []);
+
+  // কেউ ঢুকলে/বেরোলে সাথে সাথে সংখ্যা বদলায়, আর নামের তালিকাও নতুন করে আনি
+  useAdminSocket({
+    onOnline: (e) => {
+      setOnline(e.count);
+      setGuests(e.guests);
+      loadOnline();
+    },
+    onPending: setPending,
+  });
 
   const cards = [
     { label: "Today's Orders", value: data?.orders.today ?? '—', icon: ShoppingCart, tone: 'bg-primary/10 text-primary-dark' },
     { label: "Today's Revenue", value: data ? money(data.revenue.today) : '—', icon: DollarSign, tone: 'bg-accent/10 text-accent-dark' },
-    { label: 'Total Users', value: data?.users.total ?? '—', icon: Users, tone: 'bg-blue-100 text-blue-700' },
-    { label: 'Pending Orders', value: data?.pendingOrders ?? '—', icon: Clock, tone: 'bg-amber-100 text-amber-700' },
+    { label: 'Online Users', value: online ?? '—', icon: Wifi, tone: 'bg-green-100 text-green-700' },
+    { label: 'Guests Now', value: guests ?? '—', icon: Eye, tone: 'bg-purple-100 text-purple-700' },
+    { label: 'Pending Orders', value: pending ?? data?.pendingOrders ?? '—', icon: Clock, tone: 'bg-amber-100 text-amber-700' },
   ];
 
   return (
     <div>
       <h1 className="mb-5 text-2xl font-bold text-slate-800">Dashboard</h1>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         {cards.map((c) => (
           <div key={c.label} className="card flex items-center gap-4 p-5">
             <span className={`grid h-12 w-12 place-items-center rounded-xl ${c.tone}`}>
@@ -44,6 +80,38 @@ export default function DashboardPage() {
             </div>
           </div>
         ))}
+      </div>
+
+      {/* এখন কারা অনলাইন — নাম সহ */}
+      <div className="mt-6 card p-5">
+        <h2 className="mb-3 flex items-center gap-2 font-bold text-slate-800">
+          <span className="relative flex h-2.5 w-2.5">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75" />
+            <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-green-500" />
+          </span>
+          Who&apos;s Online
+          <span className="text-sm font-normal text-slate-400">
+            {online ?? 0} logged in · {guests ?? 0} guests
+          </span>
+        </h2>
+        {who.length === 0 ? (
+          <p className="text-sm text-slate-400">No logged-in users online right now.</p>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {who.map((u) => (
+              <div key={u.id} className="flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-1.5">
+                <span className="h-2 w-2 rounded-full bg-green-500" />
+                <div className="leading-tight">
+                  <p className="text-sm font-medium text-slate-800">
+                    {u.name}
+                    {u.role === 'admin' && <span className="ml-1 text-xs text-primary-dark">(admin)</span>}
+                  </p>
+                  <p className="text-xs text-slate-400">{u.email} · ৳{u.balance.toFixed(2)}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="mt-6 card overflow-hidden">

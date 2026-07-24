@@ -24,3 +24,19 @@ Thumbs.db
 
 # uploads (runtime)
 apps/api/public/storage/
+
+# গোপন তথ্য — কোনো অবস্থাতেই নয়
+.env*
+!.env.example
+*.env.bak*
+.env.bak*
+
+# ডাটাবেস ডাম্প (ইউজার ডেটা, ভাউচার কোড)
+*.sql
+*.dump
+
+# ব্যাকআপ ফাইল
+*.bak
+*.bak-*
+*.bak.*
+Caddyfile.bak*

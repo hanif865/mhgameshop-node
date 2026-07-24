@@ -33,7 +33,19 @@ router.get(
   asyncHandler(async (req, res) => {
     const { page, perPage, skip, take } = parsePagination(req.query);
     const productId = req.query.productId ? Number(req.query.productId) : undefined;
-    const where = productId ? { productId } : {};
+    const search = String(req.query.search ?? '').trim();
+    // নাম বা প্রোডাক্টের নামে খোঁজা যায়
+    const where: any = {
+      ...(productId ? { productId } : {}),
+      ...(search
+        ? {
+            OR: [
+              { title: { contains: search, mode: 'insensitive' } },
+              { product: { title: { contains: search, mode: 'insensitive' } } },
+            ],
+          }
+        : {}),
+    };
 
     const [items, total] = await Promise.all([
       prisma.variation.findMany({

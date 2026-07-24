@@ -55,6 +55,15 @@ router.post(
         nickname,
         region: info?.region ?? null,
         level: info?.level ?? null,
+        likes: info?.likes ?? null,
+        // প্রোভাইডার ভবিষ্যতে বেশি তথ্য দিলে এগুলোও যাবে
+        exp: info?.exp ?? null,
+        creditScore: info?.credit_score ?? info?.creditScore ?? null,
+        brPoints: info?.br_points ?? info?.brPoints ?? null,
+        csPoints: info?.cs_points ?? info?.csPoints ?? null,
+        guild: info?.guild ?? null,
+        createdAt: info?.created_at ?? info?.createdAt ?? null,
+        lastLogin: info?.last_login ?? info?.lastLogin ?? null,
       });
     } catch (e) {
       if (e instanceof HttpError) throw e;

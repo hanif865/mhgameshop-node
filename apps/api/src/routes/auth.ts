@@ -8,6 +8,7 @@ import { signToken, requireAuth } from '../middleware/auth';
 import { asyncHandler, HttpError } from '../middleware/error';
 import { authLimiter } from '../middleware/rateLimiter';
 import { ok, created } from '../utils/response';
+import { attachReferrer } from '../services/referral.service';
 
 const router = Router();
 
@@ -40,13 +41,15 @@ const registerSchema = z.object({
   name: z.string().min(2).max(255),
   email: z.string().email(),
   password: z.string().min(6).max(100),
+  // রেফার কোড (ঐচ্ছিক) — ভুল হলেও রেজিস্ট্রেশন আটকাবে না
+  ref: z.string().trim().max(32).optional(),
 });
 
 router.post(
   '/register',
   authLimiter,
   asyncHandler(async (req, res) => {
-    const { name, email, password } = registerSchema.parse(req.body);
+    const { name, email, password, ref } = registerSchema.parse(req.body);
 
     const exists = await prisma.user.findUnique({ where: { email } });
     if (exists) throw new HttpError(409, 'Email is already registered.');
@@ -55,6 +58,9 @@ router.post(
     const user = await prisma.user.create({
       data: { name, email, password: hashed, role: 'user' },
     });
+
+    // রেফার কোড থাকলে রেফারার বসাই (ভেতরে নিজেই এরর সামলায়)
+    await attachReferrer(user.id, ref);
 
     const token = signToken({ sub: user.id, role: user.role });
     setAuthCookie(res, token);

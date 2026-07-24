@@ -11,6 +11,7 @@ import { API_URL } from './config';
 export function useAdminSocket(handlers: {
   onPending?: (count: number) => void;
   onOrderUpdated?: (e: { id: number; status: string }) => void;
+  onOnline?: (e: { count: number; guests: number }) => void;
 }) {
   const ref = useRef(handlers);
   ref.current = handlers;
@@ -24,6 +25,7 @@ export function useAdminSocket(handlers: {
     socket.on('order:updated', (e: { id: number; status: string }) =>
       ref.current.onOrderUpdated?.(e),
     );
+    socket.on('users:online', (e: { count: number; guests: number }) => ref.current.onOnline?.(e));
     return () => {
       socket.disconnect();
     };

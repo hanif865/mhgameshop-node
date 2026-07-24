@@ -4,7 +4,8 @@ import { strRandom, money } from '../utils/helpers';
 import { HttpError } from '../middleware/error';
 import { env } from '../config/env';
 import { logger } from '../utils/logger';
-import { placeOrder } from '../providers/topupnet.provider';
+import { placeOrder } from '../providers/topup';
+import { tryPoolTopup, tryPoolVoucherSale, restorePoolCodes, poolStockFor } from './pool.service';
 import { createPayment } from '../providers/uddoktapay.provider';
 import { newOrder } from './notification.service';
 import { processComboTopup } from './combo-order.service';
@@ -12,6 +13,16 @@ import { enqueueAutoTopup } from '../queue';
 import { emitOrderStatus } from '../realtime';
 
 const ACCOUNT_INFO_TYPES = ['topup', 'ingame', 'subscription', 'autolike'];
+
+/**
+ * এই ইউজারের জন্য এই প্যাকেজে আলাদা দাম বসানো থাকলে সেটা, নইলে fallback।
+ * user_prices raw টেবিল (schema.prisma এর বাইরে), তাই $queryRaw।
+ */
+export async function priceForUser(userId: number, variationId: number, fallback: number): Promise<number> {
+  const rows = await prisma.$queryRaw<{ price: unknown }[]>`
+    SELECT price FROM user_prices WHERE user_id = ${userId} AND variation_id = ${variationId} LIMIT 1`;
+  return rows.length ? Number(rows[0].price) : fallback;
+}
 
 export interface AddOrderInput {
   userId: number;
@@ -55,11 +66,17 @@ async function addNormalOrder(input: Required<AddOrderInput>): Promise<AddOrderR
   if (!variation) throw new HttpError(422, 'Sorry, this item is out of stock.');
 
   const isVoucher = variation.product.type === 'voucher';
-  if (isVoucher && variation.vouchers.length < input.quantity) {
-    throw new HttpError(422, 'Sorry, this voucher is out of stock.');
+  if (isVoucher) {
+    // রেসিপি থাকলে কোড আসবে UC-পুল থেকে, পুরনো vouchers টেবিল থেকে নয়
+    const fromPool = await poolStockFor({ variationId });
+    const have = fromPool ?? variation.vouchers.length;
+    if (have < input.quantity) {
+      throw new HttpError(422, `দুঃখিত, এই ভাউচারের স্টক ${have}টি — ${input.quantity}টি দেওয়া যাচ্ছে না।`);
+    }
   }
 
-  const price = Number(variation.price);
+  // এই ইউজারের জন্য আলাদা দাম বসানো থাকলে সেটাই, নইলে গ্লোবাল দাম
+  const price = await priceForUser(input.userId, variation.id, Number(variation.price));
   const amount = price * input.quantity;
   const buyRate = Number(variation.buyRate);
   const profit = amount > buyRate ? money(amount - buyRate) : '0';
@@ -265,6 +282,9 @@ async function fulfilOrder(order: any): Promise<void> {
 // deliverVouchers — hand out voucher codes
 // ---------------------------------------------------------------------------
 export async function deliverVouchers(order: any): Promise<void> {
+  // রেসিপি থাকলে UC-পুল থেকে কোড দিই (pinbot লাগে না — কাস্টমার কোডই পায়)
+  if (await tryPoolVoucherSale(order)) return;
+
   const vouchers = await prisma.voucher.findMany({
     where: { variationId: order.variationId, status: 'available' },
     take: order.quantity,
@@ -314,15 +334,33 @@ export async function runAutoTopup(order: any): Promise<void> {
   if (order.product.type !== 'topup') return;
   if (!order.variation?.automatic) return;
   if (!s.bool('enable_auto_topup')) return;
-  if (!s.str('free_fire_server_url')) return;
+
+  // সক্রিয় gateway অনুযায়ী কনফিগ আছে কিনা দেখি (আগে শুধু topupnet এর
+  // free_fire_server_url দেখত, তাই pinbot এ চললেও ওটা সেট রাখতে হত)
+  const gateway = (s.str('topup_gateway') || 'topupnet').trim().toLowerCase();
+  const providerReady = gateway === 'pinbot' ? !!s.str('pinbot_api_key') : !!s.str('free_fire_server_url');
+  if (!providerReady) {
+    logger.warn(`⚠️ Auto topup: ${gateway} gateway কনফিগ করা নেই (order ${order.id})`);
+    return;
+  }
+
+  // UC-পুলে রেসিপি থাকলে সেখান থেকেই ফুলফিল হবে (নতুন পদ্ধতি)
+  if (await tryPoolTopup(order)) return;
 
   const autoVoucher = await prisma.autoVoucher.findFirst({
     where: { variationId: order.variationId, status: 'available' },
   });
 
-  if (!autoVoucher && order.product.shellId == null) {
-    logger.warn(`⚠️ Auto topup skipped: no voucher and no shell (order ${order.id})`);
-    return;
+  // শেল অর্ডার চেনার উপায় প্যাকেজ কোড — প্রোডাক্টে শেল বাঁধা থাক বা না থাক।
+  // (কোন অ্যাকাউন্ট দিয়ে যাবে সেটা pickShell ঠিক করে: বাঁধা থাকলে সেটা,
+  //  নইলে যেটা চালু আছে।)
+  const isShellOrder = !!order.variation?.providerProductId;
+
+  if (!autoVoucher && !isShellOrder) {
+    // চুপ করে return করলে অর্ডার processing এ ঝুলে থাকত আর টাকা আটকে
+    // যেত। throw করলে worker রিট্রাই করে, শেষে ক্যান্সেল ও রিফান্ড হয়।
+    logger.error(`❌ Auto topup: ভাউচারও নেই, প্যাকেজ কোডও নেই (order ${order.id})`);
+    throw new Error('এই প্যাকেজে প্রোভাইডার কোড বসানো নেই।');
   }
 
   if (autoVoucher) {
@@ -337,11 +375,12 @@ export async function runAutoTopup(order: any): Promise<void> {
       }),
       prisma.order.update({
         where: { id: order.id },
-        data: { status: 'completed', voucherCode: autoVoucher.code },
+        // completed নয় — প্রোভাইডারের webhook এলে তবেই
+        data: { status: 'autoprocessing', voucherCode: autoVoucher.code },
       }),
     ]);
   } else {
-    await prisma.order.update({ where: { id: order.id }, data: { status: 'completed' } });
+    await prisma.order.update({ where: { id: order.id }, data: { status: 'autoprocessing' } });
   }
 
   await emitOrderStatus(order.id);
@@ -350,6 +389,7 @@ export async function runAutoTopup(order: any): Promise<void> {
 
 /** Cancel an auto-topup order and refund the customer (used by the worker). */
 export async function cancelAndRefundAutoTopup(orderId: number): Promise<void> {
+  await restorePoolCodes(orderId); // পুল থেকে নেওয়া কোড থাকলে ফেরত দিই
   const order = await prisma.order.findUnique({ where: { id: orderId } });
   if (!order || order.status === 'cancelled') return;
 

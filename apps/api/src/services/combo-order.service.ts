@@ -1,7 +1,8 @@
 import { prisma } from '../config/database';
 import { logger } from '../utils/logger';
-import { placeComboVoucherOrder } from '../providers/topupnet.provider';
+import { placeComboVoucherOrder } from '../providers/topup';
 import { cancelOrder } from './order.service';
+import { tryPoolTopup, restorePoolCodes } from './pool.service';
 import { emitOrderStatus } from '../realtime';
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -15,6 +16,9 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
  * `autoprocessing` until every sub-item is resolved by maybeFinalize().
  */
 export async function processComboTopup(order: any): Promise<void> {
+  // কম্বোতে UC-রেসিপি বসানো থাকলে পুল থেকেই যাবে (একটাই ব্যাচ কল, per-item নয়)
+  if (await tryPoolTopup(order)) return;
+
   const items = await prisma.comboPackageItem.findMany({
     where: { comboPackageId: order.comboPackageId },
     orderBy: { orderColumn: 'asc' },
@@ -123,6 +127,9 @@ export async function maybeFinalize(orderId: number): Promise<void> {
 export async function cancelAndRefund(orderId: number): Promise<void> {
   const order = await prisma.order.findUnique({ where: { id: orderId } });
   if (!order || order.status === 'cancelled') return;
+
+  // পুল থেকে নেওয়া কোড থাকলে সেগুলো ফেরত দিই
+  await restorePoolCodes(orderId);
 
   // Release any reserved combo vouchers.
   await prisma.comboPackageVoucher.updateMany({

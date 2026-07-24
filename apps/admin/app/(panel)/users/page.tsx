@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Pencil, Loader2 } from 'lucide-react';
-import { apiGet, apiPut, pageData } from '@/lib/api';
+import { Pencil, Loader2, Plus, Trash2 } from 'lucide-react';
+import { apiGet, apiPut, apiPost, apiDelete, pageData } from '@/lib/api';
 import { DataTable, type Column } from '@/components/DataTable';
 import { Modal } from '@/components/Modal';
 import { StatusBadge } from '@/components/StatusBadge';
@@ -19,6 +19,18 @@ interface User {
   createdAt: string;
   _count?: { orders: number };
 }
+interface PriceRow {
+  variation_id: number;
+  price: number;
+  title: string;
+  ptitle: string;
+}
+interface Pack {
+  id: number;
+  title: string;
+  price: number;
+  product: string;
+}
 
 export default function UsersPage() {
   const toast = useToast();
@@ -30,10 +42,57 @@ export default function UsersPage() {
   const [editing, setEditing] = useState<User | null>(null);
   const [newPassword, setNewPassword] = useState('');
   const [saving, setSaving] = useState(false);
+  // পার-ইউজার দাম — এই ইউজারের কাস্টম দাম Edit User মডালেই
+  const [prices, setPrices] = useState<PriceRow[]>([]);
+  const [packs, setPacks] = useState<Pack[]>([]);
+  const [pkQuery, setPkQuery] = useState('');
+  const [newVid, setNewVid] = useState('');
+  const [newPrice, setNewPrice] = useState('');
 
-  function openEdit(u: User | null) {
+  async function loadPrices(userId: number) {
+    const res = await apiGet<{ prices: PriceRow[] }>(`/api/admin/user-prices?user=${userId}`);
+    setPrices(res.data?.prices ?? []);
+  }
+
+  async function openEdit(u: User | null) {
     setNewPassword('');
+    setPrices([]);
+    setPkQuery('');
+    setNewVid('');
+    setNewPrice('');
     setEditing(u);
+    if (u) {
+      loadPrices(u.id);
+      if (!packs.length) {
+        const p = await apiGet<{ variations: Pack[] }>('/api/admin/pool/packs');
+        setPacks(p.data?.variations ?? []);
+      }
+    }
+  }
+
+  async function addPrice() {
+    if (!editing || !newVid || newPrice === '') return toast.error('Pick a package and price.');
+    const res = await apiPost('/api/admin/user-prices', {
+      user: String(editing.id),
+      variation_id: Number(newVid),
+      price: Number(newPrice),
+    });
+    if (res.success) {
+      toast.success('Price set.');
+      setNewVid('');
+      setNewPrice('');
+      setPkQuery('');
+      loadPrices(editing.id);
+    } else toast.error(res.message || 'Failed.');
+  }
+
+  async function removePrice(variationId: number) {
+    if (!editing) return;
+    const res = await apiDelete('/api/admin/user-prices', { user: String(editing.id), variation_id: variationId });
+    if (res.success) {
+      toast.success('Removed.');
+      loadPrices(editing.id);
+    } else toast.error(res.message || 'Failed.');
   }
 
   async function load() {
@@ -166,6 +225,53 @@ export default function UsersPage() {
                 Set a password so this user (e.g. a new admin) can log in with email + password.
               </p>
             </div>
+
+            {/* পার-ইউজার কাস্টম দাম — এই ইউজারের জন্য আলাদা দাম */}
+            <div className="border-t border-slate-100 pt-3">
+              <label className="label">Custom Prices (reseller pricing)</label>
+              {prices.length === 0 ? (
+                <p className="mb-2 text-xs text-slate-400">No custom prices — pays global prices.</p>
+              ) : (
+                <div className="mb-2 space-y-1">
+                  {prices.map((p) => (
+                    <div key={p.variation_id} className="flex items-center justify-between rounded bg-slate-50 px-2 py-1 text-sm">
+                      <span>{p.ptitle} — {p.title}: <b className="text-primary-dark">৳{p.price.toFixed(2)}</b></span>
+                      <button onClick={() => removePrice(p.variation_id)} className="text-red-500 hover:text-red-700">
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <input
+                className="input mb-1 text-sm"
+                placeholder="🔍 Search package…"
+                value={pkQuery}
+                onChange={(e) => setPkQuery(e.target.value)}
+              />
+              <div className="flex gap-2">
+                <select className="input text-sm" value={newVid} onChange={(e) => setNewVid(e.target.value)} size={1}>
+                  <option value="">— package —</option>
+                  {packs
+                    .filter((v) => {
+                      const q = pkQuery.trim().toLowerCase();
+                      return !q || `${v.product} ${v.title}`.toLowerCase().includes(q);
+                    })
+                    .map((v) => (
+                      <option key={v.id} value={v.id}>{v.product} — {v.title} (৳{v.price})</option>
+                    ))}
+                </select>
+                <input
+                  className="input w-24 text-sm"
+                  type="number"
+                  placeholder="৳"
+                  value={newPrice}
+                  onChange={(e) => setNewPrice(e.target.value)}
+                />
+                <button onClick={addPrice} className="btn-primary px-3"><Plus size={14} /></button>
+              </div>
+            </div>
+
             <div className="flex justify-end gap-2">
               <button onClick={() => openEdit(null)} className="btn-ghost">
                 Cancel

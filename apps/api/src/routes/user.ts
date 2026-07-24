@@ -5,6 +5,8 @@ import { prisma } from '../config/database';
 import { requireAuth } from '../middleware/auth';
 import { asyncHandler, HttpError } from '../middleware/error';
 import { ok, paginated, parsePagination } from '../utils/response';
+import { referralStats, applyReferralCode } from '../services/referral.service';
+import { submitVideo, mySubmissions } from '../services/creator.service';
 
 const router = Router();
 router.use(requireAuth);
@@ -113,6 +115,55 @@ router.get(
       prisma.transaction.count({ where }),
     ]);
     return paginated(res, items, { page, perPage, total });
+  }),
+);
+
+// GET /api/user/referral — আমার রেফার কোড, কতজন এসেছে, কত আয়
+router.get(
+  '/referral',
+  asyncHandler(async (req, res) => {
+    const stats = await referralStats(req.userId!);
+    const invitees = await prisma.$queryRaw<{ id: number; name: string; created_at: Date }[]>`
+      SELECT id, name, created_at FROM users WHERE referred_by = ${req.userId!} ORDER BY id DESC LIMIT 50`;
+    return ok(res, { ...stats, invitees });
+  }),
+);
+
+// POST /api/user/referral — কারো রেফার কোড বসানো
+router.post(
+  '/referral',
+  asyncHandler(async (req, res) => {
+    const { code } = z.object({ code: z.string().min(1).max(32) }).parse(req.body);
+    try {
+      return ok(res, await applyReferralCode(req.userId!, code), 'Referral applied.');
+    } catch (e) {
+      throw new HttpError(422, (e as Error).message);
+    }
+  }),
+);
+
+// GET /api/user/creator — আমার জমা ও শর্তাবলি
+router.get(
+  '/creator',
+  asyncHandler(async (req, res) => ok(res, await mySubmissions(req.userId!))),
+);
+
+// POST /api/user/creator — নতুন ভিডিও জমা
+router.post(
+  '/creator',
+  asyncHandler(async (req, res) => {
+    const b = z
+      .object({
+        url: z.string().min(5).max(500),
+        views: z.coerce.number().int().min(0).nullable().optional(),
+        note: z.string().max(500).nullable().optional(),
+      })
+      .parse(req.body);
+    try {
+      return ok(res, await submitVideo(req.userId!, b), 'Submitted for review.');
+    } catch (e) {
+      throw new HttpError(422, (e as Error).message);
+    }
   }),
 );
 

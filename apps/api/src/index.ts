@@ -23,6 +23,7 @@ import userRoutes from './routes/user';
 import uidCheckerRoutes from './routes/uid-checker';
 import adminRoutes from './routes/admin';
 import publicRoutes from './routes/public';
+import botRoutes from './routes/bot';
 
 const app = express();
 
@@ -74,6 +75,8 @@ app.use('/', webhookRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/uid-checker', uidCheckerRoutes);
 app.use('/api/admin', adminRoutes);
+// Telegram top-up bot (server-to-server, X-Bot-Key auth)
+app.use('/api/bot', botRoutes);
 
 // ---- 404 + error handling ----
 app.use(notFound);

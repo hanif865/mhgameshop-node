@@ -54,13 +54,29 @@ const SECTIONS: Section[] = [
     ],
   },
   {
-    title: 'Auto Topup (TopupNet)',
+    title: 'Auto Topup (PinBot)',
     fields: [
       { key: 'enable_auto_topup', label: 'Enable Auto Topup', type: 'toggle' },
-      { key: 'free_fire_server_url', label: 'TopupNet Base URL' },
-      { key: 'free_fire_server_api_key', label: 'TopupNet API Key', type: 'password' },
-      { key: 'unipin_product_id', label: 'UniPin Product ID (combo)' },
+      { key: 'topup_gateway', label: 'Gateway (pinbot / topupnet)' },
+      { key: 'pinbot_base_url', label: 'PinBot Base URL' },
+      { key: 'pinbot_api_key', label: 'PinBot API Key', type: 'password' },
       { key: 'unipin_redeem_url', label: 'UniPin Redeem URL (My Codes button)' },
+    ],
+  },
+  {
+    title: 'Referral Program',
+    fields: [
+      { key: 'referral_enabled', label: 'Enable Referral', type: 'toggle' },
+      { key: 'referral_bonus', label: 'Referrer Bonus ৳ (on referee’s first order)' },
+      { key: 'referral_referee_bonus', label: 'New User Bonus ৳ (on signup)' },
+      { key: 'referral_min_order', label: 'Minimum Order ৳ to qualify (0 = any)' },
+    ],
+  },
+  {
+    title: 'Creator Program',
+    fields: [
+      { key: 'creator_enabled', label: 'Enable Creator Program', type: 'toggle' },
+      { key: 'creator_rules', label: 'Rules shown to creators', type: 'textarea' },
     ],
   },
   {

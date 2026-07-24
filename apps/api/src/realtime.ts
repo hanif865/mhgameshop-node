@@ -1,6 +1,8 @@
 import { prisma } from './config/database';
 import { getIO } from './config/socket';
 import { logger } from './utils/logger';
+import { maybeRewardReferral } from './services/referral.service';
+import { notifyOrderResult } from './services/notification.service';
 
 /**
  * Realtime broadcasts. Safe no-ops when Socket.io isn't initialized (e.g. in
@@ -9,6 +11,11 @@ import { logger } from './utils/logger';
 
 /** Notify a user that one of their orders changed status. */
 export async function emitOrderStatus(orderId: number): Promise<void> {
+  // এগুলো socket ছাড়াও চলা দরকার, তাই getIO() চেকের আগেই।
+  // দুটোই ভেতরে নিজের এরর সামলায়।
+  maybeRewardReferral(orderId).catch(() => {}); // রেফার বোনাস (একবারই)
+  notifyOrderResult(orderId).catch(() => {}); // কাস্টমারের টেলিগ্রামে ফল
+
   const io = getIO();
   if (!io) return;
   try {

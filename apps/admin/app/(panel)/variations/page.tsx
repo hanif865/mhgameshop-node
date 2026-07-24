@@ -28,19 +28,21 @@ export default function VariationsPage() {
   const [creating, setCreating] = useState(false);
   const [products, setProducts] = useState<{ id: number; title: string }[]>([]);
   const [form, setForm] = useState<any>({ automatic: false, status: 1 });
+  const [search, setSearch] = useState('');
 
   async function load() {
     setLoading(true);
-    const res = await apiGet(`/api/admin/variations?page=${page}`);
+    const res = await apiGet(`/api/admin/variations?page=${page}&search=${encodeURIComponent(search)}`);
     const d = pageData<Variation>(res);
     setRows(d.items);
     setTotalPages(d.totalPages);
     setLoading(false);
   }
   useEffect(() => {
-    load();
+    const t = setTimeout(load, search ? 350 : 0);
+    return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page]);
+  }, [page, search]);
 
   async function openCreate() {
     const res = await apiGet(`/api/admin/products?perPage=100`);
@@ -114,6 +116,14 @@ export default function VariationsPage() {
         page={page}
         totalPages={totalPages}
         onPageChange={setPage}
+        search={{
+          value: search,
+          onChange: (v) => {
+            setPage(1);
+            setSearch(v);
+          },
+          placeholder: 'Search variation / product…',
+        }}
       />
 
       <Modal open={creating} onClose={() => setCreating(false)} title="New Variation">

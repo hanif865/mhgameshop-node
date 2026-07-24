@@ -41,6 +41,10 @@ const schema = z.object({
 
   TELEGRAM_BOT_TOKEN: z.string().optional().default(''),
   TELEGRAM_CHAT_ID: z.string().optional().default(''),
+
+  // Shared secret for the Telegram top-up bot (server-to-server, /api/bot/*).
+  // Empty = bot integration disabled.
+  BOT_API_KEY: z.string().optional().default(''),
 });
 
 const parsed = schema.safeParse(process.env);

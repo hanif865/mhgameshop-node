@@ -74,6 +74,7 @@ model User {
   googleAvatar  String?  @map("google_avatar")
   avatar        String?
   phone         String?
+  telegramId    String?  @unique @map("telegram_id")
   balance       Decimal  @default(0) @db.Decimal(16, 2)
   role          Role     @default(user)
   status        Int      @default(1) // 1 = active, 0 = banned

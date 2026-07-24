@@ -24,10 +24,19 @@ const GROUPS: {
       { href: '/categories', label: 'Categories' },
       { href: '/products', label: 'Products' },
       { href: '/variations', label: 'Variations' },
-      { href: '/combos', label: 'Combo Packages' },
       { href: '/shells', label: 'Shells' },
-      { href: '/vouchers', label: 'Vouchers' },
-      { href: '/auto-vouchers', label: 'Auto Vouchers' },
+      // Combo Packages, Vouchers, Auto Vouchers — UC Pool + Recipes এসে
+      // এগুলো পুরনো হয়ে গেছে। পেজ ও ডেটা রয়ে গেছে (অর্ডার ইতিহাস/ফলব্যাক),
+      // শুধু মেনু থেকে সরানো হলো যাতে প্যানেল পরিষ্কার থাকে।
+    ],
+  },
+  {
+    label: 'UC Pool',
+    icon: Boxes,
+    links: [
+      { href: '/pool', label: 'Voucher Pool' },
+      { href: '/recipes', label: 'Recipes' },
+      // User Prices এখন Users → Edit User মডালের ভেতরে
     ],
   },
   {
@@ -35,6 +44,8 @@ const GROUPS: {
     icon: ShoppingCart,
     links: [
       { href: '/orders', label: 'Orders' },
+      { href: '/creator', label: 'Creator Videos' },
+      { href: '/broadcast', label: 'Broadcast' },
       { href: '/users', label: 'Users' },
       { href: '/deposits', label: 'Deposits' },
       { href: '/transactions', label: 'Transactions' },

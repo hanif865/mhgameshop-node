@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
@@ -16,12 +16,18 @@ export default function RegisterPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  // রেফার কোড URL থেকে (?ref=XXXXXX)
+  const [ref, setRef] = useState('');
+  useEffect(() => {
+    const v = new URLSearchParams(window.location.search).get('ref');
+    if (v) setRef(v.trim().toUpperCase());
+  }, []);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     try {
-      await register(name, email, password);
+      await register(name, email, password, ref || undefined);
       toast.success('Account created!');
       router.push('/user/orders');
     } catch (err) {

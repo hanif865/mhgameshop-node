@@ -17,6 +17,10 @@ import shells from './shells';
 import sliders from './sliders';
 import pages from './pages';
 import settings from './settings';
+import pool from './pool';
+import userPrices from './userPrices';
+import creator from './creator';
+import broadcast from './broadcast';
 
 const router = Router();
 
@@ -48,5 +52,10 @@ router.use('/shells', shells);
 router.use('/sliders', bustCatalogCache, sliders);
 router.use('/pages', pages);
 router.use('/settings', settings);
+// UC পুল, রেসিপি ও পার-ইউজার দাম — ক্যাটালগ বদলায় তাই ক্যাশ বাস্ট
+router.use('/pool', bustCatalogCache, pool);
+router.use('/user-prices', bustCatalogCache, userPrices);
+router.use('/creator', creator);
+router.use('/broadcast', broadcast);
 
 export default router;

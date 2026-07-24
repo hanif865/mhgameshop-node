@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import clsx from 'clsx';
-import { ShoppingBag, Ticket, Wallet, ArrowLeftRight, User as UserIcon } from 'lucide-react';
+import { ShoppingBag, Ticket, Wallet, ArrowLeftRight, User as UserIcon, Gift, Video } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
 import { money } from '@/lib/format';
 
@@ -12,6 +12,8 @@ const LINKS = [
   { href: '/user/codes', label: 'My Codes', icon: Ticket },
   { href: '/user/add-funds', label: 'Add Funds', icon: Wallet },
   { href: '/user/transactions', label: 'Transactions', icon: ArrowLeftRight },
+  { href: '/user/referral', label: 'Refer & Earn', icon: Gift },
+  { href: '/user/creator', label: 'Creator Program', icon: Video },
   { href: '/user/account', label: 'Account', icon: UserIcon },
 ];
 

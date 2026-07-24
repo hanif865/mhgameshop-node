@@ -5,6 +5,7 @@ import { apiGet } from '@/lib/api';
 import { imageUrl } from '@/lib/config';
 import type { SettingsMap } from '@/lib/settings';
 import { Providers } from '@/components/Providers';
+import { Presence } from '@/components/Presence';
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
 import { MobileBottomNav } from '@/components/layout/MobileBottomNav';
@@ -44,6 +45,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
           <MobileBottomNav />
           <FloatWidget />
           <PWAInstall />
+          <Presence />
         </Providers>
       </body>
     </html>

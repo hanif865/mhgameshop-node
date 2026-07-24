@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { prisma } from '../../config/database';
 import { asyncHandler } from '../../middleware/error';
 import { ok } from '../../utils/response';
+import { onlineUsers, onlineGuests } from '../../config/socket';
 
 const router = Router();
 
@@ -61,9 +62,31 @@ router.get(
         month: revenueMonth._sum.amount ?? '0',
         monthProfit: revenueMonth._sum.profit ?? '0',
       },
-      users: { total: totalUsers, newToday: newUsersToday },
+      // online = এই মুহূর্তে socket দিয়ে যুক্ত আলাদা ইউজার
+      users: { total: totalUsers, newToday: newUsersToday, online: onlineUsers().count },
+      guests: onlineGuests(),
       pendingOrders,
       recentOrders,
+    });
+  }),
+);
+
+// GET /api/admin/dashboard/online — এখন কারা অনলাইন, নাম সহ
+router.get(
+  '/online',
+  asyncHandler(async (_req, res) => {
+    const { userIds, count } = onlineUsers();
+    const users = userIds.length
+      ? await prisma.user.findMany({
+          where: { id: { in: userIds } },
+          select: { id: true, name: true, email: true, role: true, balance: true },
+          orderBy: { name: 'asc' },
+        })
+      : [];
+    return ok(res, {
+      count,
+      guests: onlineGuests(),
+      users: users.map((u) => ({ ...u, balance: Number(u.balance) })),
     });
   }),
 );

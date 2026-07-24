@@ -16,7 +16,7 @@ interface AuthContextValue {
   user: User | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (name: string, email: string, password: string) => Promise<void>;
+  register: (name: string, email: string, password: string, ref?: string) => Promise<void>;
   logout: () => Promise<void>;
   refresh: () => Promise<void>;
 }
@@ -43,8 +43,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(res.data.user);
   }
 
-  async function register(name: string, email: string, password: string) {
-    const res = await apiPost<{ user: User }>('/api/auth/register', { name, email, password });
+  async function register(name: string, email: string, password: string, ref?: string) {
+    // ref থাকলে পাঠাই — রেফার কোড
+    const res = await apiPost<{ user: User }>('/api/auth/register', { name, email, password, ...(ref ? { ref } : {}) });
     if (!res.success || !res.data) throw new Error(res.message || 'Registration failed.');
     setUser(res.data.user);
   }
