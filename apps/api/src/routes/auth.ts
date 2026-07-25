@@ -106,11 +106,12 @@ router.get(
     failureRedirect: `${env.WEB_URL}/auth/login?error=google`,
   }),
   (req, res) => {
-    const u = req.user as { id: number; role: string };
+    const u = req.user as { id: number; role: string; isNew?: boolean };
     const token = signToken({ sub: u.id, role: u.role });
     setAuthCookie(res, token);
     // Hand the token to the web app so NextAuth can persist it too.
-    res.redirect(`${env.WEB_URL}/auth/callback?token=${token}`);
+    const newParam = u.isNew ? '&new=1' : '';
+    res.redirect(`${env.WEB_URL}/auth/callback?token=${token}${newParam}`);
   },
 );
 

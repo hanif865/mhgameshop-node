@@ -7,6 +7,7 @@ import { asyncHandler, HttpError } from '../middleware/error';
 import { ok, paginated, parsePagination } from '../utils/response';
 import { referralStats, applyReferralCode } from '../services/referral.service';
 import { submitVideo, mySubmissions } from '../services/creator.service';
+import { spinStatus, doSpin } from '../services/spin.service';
 
 const router = Router();
 router.use(requireAuth);
@@ -161,6 +162,24 @@ router.post(
       .parse(req.body);
     try {
       return ok(res, await submitVideo(req.userId!, b), 'Submitted for review.');
+    } catch (e) {
+      throw new HttpError(422, (e as Error).message);
+    }
+  }),
+);
+
+// GET /api/user/spin — স্পিন অবস্থা (চালু?, পুরস্কার, স্পিন করা যাবে?)
+router.get(
+  '/spin',
+  asyncHandler(async (req, res) => ok(res, await spinStatus(req.userId!))),
+);
+
+// POST /api/user/spin — স্পিন করে বোনাস নেওয়া
+router.post(
+  '/spin',
+  asyncHandler(async (req, res) => {
+    try {
+      return ok(res, await doSpin(req.userId!), 'Spin complete!');
     } catch (e) {
       throw new HttpError(422, (e as Error).message);
     }

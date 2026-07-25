@@ -7,6 +7,7 @@ import { Loader2 } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
 import { useToast } from '@/components/ui/Toast';
 import { API_URL } from '@/lib/config';
+import { apiGet } from '@/lib/api';
 
 export default function RegisterPage() {
   const { register } = useAuth();
@@ -29,6 +30,16 @@ export default function RegisterPage() {
     try {
       await register(name, email, password, ref || undefined);
       toast.success('Account created!');
+      // নতুন ইউজার — স্পিন অফার চালু ও করা যাবে হলে welcome পপ-আপসহ স্পিন পেজে
+      try {
+        const sp = await apiGet<{ enabled: boolean; canSpin: boolean }>('/api/user/spin');
+        if (sp.data?.enabled && sp.data?.canSpin) {
+          router.push('/user/spin?welcome=1');
+          return;
+        }
+      } catch {
+        /* স্পিন না পেলেও রেজিস্ট্রেশন আটকাবে না */
+      }
       router.push('/user/orders');
     } catch (err) {
       toast.error((err as Error).message);

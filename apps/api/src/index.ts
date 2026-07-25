@@ -13,6 +13,7 @@ import { logger } from './utils/logger';
 import { generalLimiter } from './middleware/rateLimiter';
 import { errorHandler, notFound } from './middleware/error';
 import { configurePassport, passport } from './config/passport';
+import { ensureSpinTable } from './services/spin.service';
 
 import authRoutes from './routes/auth';
 import productRoutes from './routes/products';
@@ -85,6 +86,7 @@ app.use(errorHandler);
 // ---- Boot ----
 async function bootstrap() {
   await connectRedis();
+  await ensureSpinTable().catch((e) => logger.error('spin table ensure failed: ' + e.message));
 
   const server = http.createServer(app);
   initSocket(server); // attach Socket.io

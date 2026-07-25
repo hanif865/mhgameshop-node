@@ -11,6 +11,9 @@ import {
   Ticket,
   Wallet,
   ArrowLeftRight,
+  Gift,
+  Sparkles,
+  Video,
   User as UserIcon,
   LogOut,
   LogIn,
@@ -24,6 +27,9 @@ const LINKS = [
   { href: '/user/codes', label: 'My Codes', icon: Ticket },
   { href: '/user/add-funds', label: 'Add Funds', icon: Wallet },
   { href: '/user/transactions', label: 'Transactions', icon: ArrowLeftRight },
+  { href: '/user/referral', label: 'Refer & Earn', icon: Gift },
+  { href: '/user/spin', label: 'Spin & Win', icon: Sparkles },
+  { href: '/user/creator', label: 'Creator Program', icon: Video },
   { href: '/user/account', label: 'Account', icon: UserIcon },
 ];
 

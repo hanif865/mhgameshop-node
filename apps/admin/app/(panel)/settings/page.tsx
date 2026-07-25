@@ -80,6 +80,13 @@ const SECTIONS: Section[] = [
     ],
   },
   {
+    title: 'Spin & Win',
+    fields: [
+      { key: 'spin_enabled', label: 'Enable Spin & Win', type: 'toggle' },
+      { key: 'spin_prizes', label: 'Prize amounts ৳ (comma separated, e.g. 1,2,3,5,10)' },
+    ],
+  },
+  {
     title: 'Telegram Notifications',
     fields: [
       { key: 'telegram_bot_token', label: 'Bot Token', type: 'password' },

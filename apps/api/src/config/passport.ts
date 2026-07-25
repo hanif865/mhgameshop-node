@@ -29,6 +29,7 @@ export function configurePassport() {
           let user = await prisma.user.findFirst({
             where: { OR: [{ googleId }, { email }] },
           });
+          let isNew = false;
 
           if (user) {
             user = await prisma.user.update({
@@ -36,6 +37,7 @@ export function configurePassport() {
               data: { googleId, googleAvatar: avatar, avatar: user.avatar ?? avatar },
             });
           } else {
+            isNew = true;
             user = await prisma.user.create({
               data: {
                 name,
@@ -49,7 +51,7 @@ export function configurePassport() {
             });
           }
 
-          done(null, { id: user.id, role: user.role });
+          done(null, { id: user.id, role: user.role, isNew });
         } catch (e) {
           done(e as Error);
         }
