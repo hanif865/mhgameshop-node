@@ -8,6 +8,7 @@ import { ok, paginated, parsePagination } from '../utils/response';
 import { referralStats, applyReferralCode } from '../services/referral.service';
 import { submitVideo, mySubmissions } from '../services/creator.service';
 import { spinStatus, doSpin } from '../services/spin.service';
+import { listSavedAccounts, saveAccount, removeSavedAccount } from '../services/savedAccount.service';
 
 const router = Router();
 router.use(requireAuth);
@@ -183,6 +184,47 @@ router.post(
     } catch (e) {
       throw new HttpError(422, (e as Error).message);
     }
+  }),
+);
+
+// GET /api/user/saved-accounts?product_id= — এই গেমে সেভ করা Player ID
+router.get(
+  '/saved-accounts',
+  asyncHandler(async (req, res) => {
+    const productId = Number(req.query.product_id);
+    if (!Number.isInteger(productId)) return ok(res, []);
+    return ok(res, await listSavedAccounts(req.userId!, productId));
+  }),
+);
+
+// POST /api/user/saved-accounts — টপ-আপের সময় আইডি সেভ/আপডেট
+router.post(
+  '/saved-accounts',
+  asyncHandler(async (req, res) => {
+    const b = z
+      .object({
+        product_id: z.coerce.number().int().positive(),
+        player_id: z.string().min(1).max(64),
+        nickname: z.string().max(120).nullable().optional(),
+      })
+      .parse(req.body);
+    await saveAccount(req.userId!, b.product_id, b.player_id, b.nickname ?? null);
+    return ok(res, null, 'Saved.');
+  }),
+);
+
+// POST /api/user/saved-accounts/remove — সেভ করা আইডি মুছুন
+router.post(
+  '/saved-accounts/remove',
+  asyncHandler(async (req, res) => {
+    const b = z
+      .object({
+        product_id: z.coerce.number().int().positive(),
+        player_id: z.string().min(1).max(64),
+      })
+      .parse(req.body);
+    await removeSavedAccount(req.userId!, b.product_id, b.player_id);
+    return ok(res, null, 'Removed.');
   }),
 );
 

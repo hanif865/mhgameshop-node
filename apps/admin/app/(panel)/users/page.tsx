@@ -48,10 +48,14 @@ export default function UsersPage() {
   const [pkQuery, setPkQuery] = useState('');
   const [newVid, setNewVid] = useState('');
   const [newPrice, setNewPrice] = useState('');
+  const [tgDiscount, setTgDiscount] = useState('');
 
   async function loadPrices(userId: number) {
-    const res = await apiGet<{ prices: PriceRow[] }>(`/api/admin/user-prices?user=${userId}`);
+    const res = await apiGet<{ prices: PriceRow[]; user?: { telegram_discount?: number } }>(
+      `/api/admin/user-prices?user=${userId}`,
+    );
     setPrices(res.data?.prices ?? []);
+    setTgDiscount(String(res.data?.user?.telegram_discount ?? 0));
   }
 
   async function openEdit(u: User | null) {
@@ -116,6 +120,7 @@ export default function UsersPage() {
       balance: Number(editing.balance),
       status: editing.status,
       role: editing.role,
+      telegram_discount: Number(tgDiscount) || 0,
       ...(newPassword ? { password: newPassword } : {}),
     });
     setSaving(false);
@@ -223,6 +228,20 @@ export default function UsersPage() {
               />
               <p className="mt-1 text-xs text-slate-400">
                 Set a password so this user (e.g. a new admin) can log in with email + password.
+              </p>
+            </div>
+
+            {/* টেলিগ্রাম ফ্ল্যাট ছাড় — শুধু বট থেকে অর্ডারে */}
+            <div className="border-t border-slate-100 pt-3">
+              <label className="label">Telegram Discount ৳ (per package, Telegram only)</label>
+              <input
+                type="number"
+                className="input"
+                value={tgDiscount}
+                onChange={(e) => setTgDiscount(e.target.value)}
+              />
+              <p className="mt-1 text-xs text-slate-400">
+                এই ইউজার টেলিগ্রাম বট থেকে অর্ডার করলে প্রতিটি প্যাকেজে এত টাকা কম পড়বে (ওয়েবসাইটে নয়)।
               </p>
             </div>
 

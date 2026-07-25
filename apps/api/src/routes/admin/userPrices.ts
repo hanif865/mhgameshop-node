@@ -36,8 +36,15 @@ router.get(
         JOIN products p ON p.id = v.product_id
        WHERE up.user_id = ${target.id}
        ORDER BY up.variation_id`;
+    const [dr] = await prisma.$queryRaw<{ telegram_discount: unknown }[]>`
+      SELECT telegram_discount FROM users WHERE id = ${target.id}`;
     return ok(res, {
-      user: { id: target.id, name: target.name, email: target.email },
+      user: {
+        id: target.id,
+        name: target.name,
+        email: target.email,
+        telegram_discount: Number(dr?.telegram_discount ?? 0),
+      },
       prices: rows.map((r) => ({ ...r, price: Number(r.price) })),
     });
   }),

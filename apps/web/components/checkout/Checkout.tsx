@@ -8,7 +8,7 @@ import { BadgeCheck, Loader2, Wallet, Zap, LogIn, Info, HelpCircle } from 'lucid
 import { useAuth } from '@/lib/auth';
 import { useToast } from '@/components/ui/Toast';
 import { useSettings } from '@/lib/settings';
-import { apiPost } from '@/lib/api';
+import { apiGet, apiPost } from '@/lib/api';
 import { imageUrl } from '@/lib/config';
 import { money } from '@/lib/format';
 
@@ -70,6 +70,7 @@ export function Checkout({ product }: { product: CheckoutProduct }) {
   const [checking, setChecking] = useState(false);
   const [payment, setPayment] = useState<'wallet' | 'uddoktapay'>('uddoktapay');
   const [submitting, setSubmitting] = useState(false);
+  const [saved, setSaved] = useState<{ player_id: string; nickname: string | null }[]>([]);
 
   // Auto-select Wallet once the user loads with a positive balance (user is
   // fetched async, so the initial state can't rely on it). Manual changes stick.
@@ -85,6 +86,27 @@ export function Checkout({ product }: { product: CheckoutProduct }) {
   useEffect(() => {
     setQuantity(1);
   }, [selection?.id, selection?.kind]);
+
+  // সেভ করা Player ID লোড (লগইন থাকলে, player-id মোডে)
+  async function loadSaved() {
+    if (!user || !needsPlayerId) return;
+    const r = await apiGet<{ player_id: string; nickname: string | null }[]>(
+      `/api/user/saved-accounts?product_id=${product.id}`,
+    );
+    setSaved(r.data ?? []);
+  }
+  useEffect(() => {
+    loadSaved();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, needsPlayerId, product.id]);
+
+  async function removeSaved(pid: string) {
+    setSaved((s) => s.filter((x) => x.player_id !== pid));
+    await apiPost('/api/user/saved-accounts/remove', {
+      product_id: product.id,
+      player_id: pid,
+    }).catch(() => {});
+  }
 
   const qty = isVoucher ? quantity : 1;
   const selectedPrice = (selection ? Number(selection.price) : 0) * qty;
@@ -149,6 +171,14 @@ export function Checkout({ product }: { product: CheckoutProduct }) {
       if (!res.success) {
         toast.error(res.message || 'Order failed.');
         return;
+      }
+      // এই আইডি সেভ করে রাখি — পরেরবার ১ ক্লিকে বেছে নেওয়া যাবে
+      if (needsPlayerId && playerId.trim()) {
+        apiPost('/api/user/saved-accounts', {
+          product_id: product.id,
+          player_id: playerId.trim(),
+          nickname,
+        }).catch(() => {});
       }
       const redirect = (res as any).redirect_url as string | undefined;
       if (redirect) {
@@ -268,6 +298,48 @@ export function Checkout({ product }: { product: CheckoutProduct }) {
           {/* Default Player ID + UID checker */}
           {needsPlayerId && (
             <Section num={2} title="Account Info">
+              {saved.length > 0 && (
+                <div className="mb-3">
+                  <p className="mb-1.5 text-xs font-medium text-slate-500">
+                    সেভ করা আইডি — ট্যাপ করে বেছে নিন
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {saved.map((s) => (
+                      <div
+                        key={s.player_id}
+                        className={clsx(
+                          'relative flex items-center rounded-lg border pr-6 transition',
+                          playerId === s.player_id
+                            ? 'border-primary bg-primary/5'
+                            : 'border-slate-200 hover:border-primary/50',
+                        )}
+                      >
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setPlayerId(s.player_id);
+                            setNickname(s.nickname);
+                          }}
+                          className="px-3 py-1.5 text-left"
+                        >
+                          <span className="block text-xs font-semibold text-slate-700">
+                            {s.nickname || s.player_id}
+                          </span>
+                          <span className="block text-[10px] text-slate-400">{s.player_id}</span>
+                        </button>
+                        <button
+                          type="button"
+                          aria-label="Remove"
+                          onClick={() => removeSaved(s.player_id)}
+                          className="absolute right-1 top-1 leading-none text-slate-300 hover:text-red-500"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
               <label className="mb-1 block text-sm font-medium text-slate-600">
                 এখানে প্লেয়ার আইডি কোড দিন
               </label>

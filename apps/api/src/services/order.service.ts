@@ -24,12 +24,27 @@ export async function priceForUser(userId: number, variationId: number, fallback
   return rows.length ? Number(rows[0].price) : fallback;
 }
 
+/** এই ইউজারের টেলিগ্রাম ফ্ল্যাট ছাড় (৳, প্রতি প্যাকেজে)। না থাকলে 0। */
+export async function telegramDiscountFor(userId: number): Promise<number> {
+  const rows = await prisma.$queryRaw<{ telegram_discount: unknown }[]>`
+    SELECT telegram_discount FROM users WHERE id = ${userId} LIMIT 1`;
+  return rows.length ? Number(rows[0].telegram_discount) || 0 : 0;
+}
+
+/** users.telegram_discount কলাম না থাকলে বানায় (বুট-টাইমে, idempotent)। */
+export async function ensureTelegramDiscountColumn(): Promise<void> {
+  await prisma.$executeRawUnsafe(
+    'ALTER TABLE users ADD COLUMN IF NOT EXISTS telegram_discount NUMERIC(16,2) NOT NULL DEFAULT 0',
+  );
+}
+
 export interface AddOrderInput {
   userId: number;
   variationId: string; // numeric id or "combo-{id}"
   paymentMethod: 'wallet' | 'uddoktapay';
   accountInfo: Record<string, string> | null;
   quantity?: number;
+  source?: 'web' | 'telegram';
 }
 
 export interface AddOrderResult {
@@ -43,10 +58,11 @@ export interface AddOrderResult {
 export async function addOrder(input: AddOrderInput): Promise<AddOrderResult> {
   const quantity = Math.max(1, input.quantity ?? 1);
 
+  const source = input.source ?? 'web';
   if (input.variationId.startsWith('combo-')) {
-    return addComboOrder({ ...input, quantity });
+    return addComboOrder({ ...input, quantity, source });
   }
-  return addNormalOrder({ ...input, quantity });
+  return addNormalOrder({ ...input, quantity, source });
 }
 
 // ---------------------------------------------------------------------------
@@ -76,9 +92,14 @@ async function addNormalOrder(input: Required<AddOrderInput>): Promise<AddOrderR
   }
 
   // এই ইউজারের জন্য আলাদা দাম বসানো থাকলে সেটাই, নইলে গ্লোবাল দাম
-  const price = await priceForUser(input.userId, variation.id, Number(variation.price));
-  const amount = price * input.quantity;
+  let price = await priceForUser(input.userId, variation.id, Number(variation.price));
   const buyRate = Number(variation.buyRate);
+  // টেলিগ্রাম থেকে অর্ডার হলে এই ইউজারের ফ্ল্যাট ছাড় (কখনো কেনা-দামের নিচে নয়)
+  if (input.source === 'telegram') {
+    const disc = await telegramDiscountFor(input.userId);
+    if (disc > 0) price = Math.max(price - disc, buyRate);
+  }
+  const amount = price * input.quantity;
   const profit = amount > buyRate ? money(amount - buyRate) : '0';
 
   const accountInfo = ACCOUNT_INFO_TYPES.includes(variation.product.type)
@@ -116,9 +137,13 @@ async function addComboOrder(input: Required<AddOrderInput>): Promise<AddOrderRe
   });
   if (!combo) throw new HttpError(422, 'Sorry, this combo package is out of stock.');
 
-  const price = Number(combo.price);
-  const amount = price * input.quantity;
+  let price = Number(combo.price);
   const buyRate = Number(combo.buyRate);
+  if (input.source === 'telegram') {
+    const disc = await telegramDiscountFor(input.userId);
+    if (disc > 0) price = Math.max(price - disc, buyRate);
+  }
+  const amount = price * input.quantity;
   const profit = amount > buyRate ? money(amount - buyRate) : '0';
 
   const order = await prisma.order.create({

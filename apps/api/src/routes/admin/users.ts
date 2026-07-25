@@ -48,6 +48,7 @@ const updateSchema = z.object({
   balance: z.coerce.number().nonnegative().optional(),
   status: z.coerce.number().int().min(0).max(1).optional(),
   role: z.enum(['user', 'admin', 'reseller']).optional(),
+  telegram_discount: z.coerce.number().min(0).optional(),
   password: z.string().min(6).max(100).optional(),
 });
 
@@ -62,6 +63,9 @@ router.put(
     if (parsed.password) data.password = await bcrypt.hash(parsed.password, 10);
 
     const user = await prisma.user.update({ where: { id: Number(req.params.id) }, data });
+    if (parsed.telegram_discount !== undefined) {
+      await prisma.$executeRaw`UPDATE users SET telegram_discount = ${parsed.telegram_discount} WHERE id = ${Number(req.params.id)}`;
+    }
     return ok(res, publicUser(user), 'User updated.');
   }),
 );

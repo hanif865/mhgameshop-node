@@ -69,6 +69,31 @@ export default async function HomePage() {
 
         <LatestOrders orders={latestOrders} />
 
+        {/* Telegram bot promo */}
+        <section className="overflow-hidden rounded-2xl bg-gradient-to-r from-sky-500 to-indigo-600 p-6 text-white shadow-lg sm:p-8">
+          <div className="flex flex-col items-center gap-5 text-center sm:flex-row sm:justify-between sm:text-left">
+            <div className="flex items-center gap-4">
+              <span className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-white/15">
+                <Send size={30} />
+              </span>
+              <div>
+                <h2 className="text-xl font-extrabold sm:text-2xl">⚡ টেলিগ্রামেই ইনস্ট্যান্ট টপ-আপ!</h2>
+                <p className="mt-1 text-sm text-white/85">
+                  ২৪/৭ অটোমেটিক — সেকেন্ডেই ডায়মন্ড ও ভাউচার সরাসরি আমাদের বট থেকে।
+                </p>
+              </div>
+            </div>
+            <a
+              href="https://t.me/mh_game_shop_bot"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="shrink-0 rounded-xl bg-white px-6 py-3 font-bold text-indigo-600 shadow-md transition hover:bg-slate-100"
+            >
+              বট চালু করুন →
+            </a>
+          </div>
+        </section>
+
         {/* CTA strip */}
         <section className="grid gap-4 sm:grid-cols-2">
           <a
