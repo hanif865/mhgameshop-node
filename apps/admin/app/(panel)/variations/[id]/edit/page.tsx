@@ -8,7 +8,7 @@ import { BulkAddModal } from '@/components/BulkAddModal';
 import { StatusBadge } from '@/components/StatusBadge';
 import { useToast } from '@/components/ui/Toast';
 
-type Tab = 'main' | 'auto' | 'vouchers';
+type Tab = 'main' | 'vouchers';
 
 export default function EditVariation({ params }: { params: { id: string } }) {
   const id = params.id;
@@ -52,7 +52,7 @@ export default function EditVariation({ params }: { params: { id: string } }) {
       <p className="mb-5 text-sm text-slate-400">{form.product?.title}</p>
 
       <div className="mb-5 flex gap-2 border-b border-slate-200">
-        {(['main', 'auto', 'vouchers'] as Tab[]).map((t) => (
+        {(['main', 'vouchers'] as Tab[]).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -63,7 +63,7 @@ export default function EditVariation({ params }: { params: { id: string } }) {
                 : 'border-transparent text-slate-400 hover:text-slate-600',
             )}
           >
-            {t === 'auto' ? 'Auto Vouchers' : t === 'vouchers' ? 'Vouchers' : 'Main'}
+            {t === 'vouchers' ? 'Vouchers' : 'Main'}
           </button>
         ))}
       </div>
@@ -117,14 +117,6 @@ export default function EditVariation({ params }: { params: { id: string } }) {
             </button>
           </div>
         </div>
-      )}
-
-      {tab === 'auto' && (
-        <CodeManager
-          listUrl={`/api/admin/variations/${id}/auto-vouchers`}
-          bulkUrl={`/api/admin/variations/${id}/auto-vouchers/bulk`}
-          deleteUrl={(codeId) => `/api/admin/variations/auto-vouchers/${codeId}`}
-        />
       )}
 
       {tab === 'vouchers' && (

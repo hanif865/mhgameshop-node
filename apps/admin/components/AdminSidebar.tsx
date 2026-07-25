@@ -24,10 +24,8 @@ const GROUPS: {
       { href: '/categories', label: 'Categories' },
       { href: '/products', label: 'Products' },
       { href: '/variations', label: 'Variations' },
-      { href: '/combos', label: 'Combo Packages' },
       { href: '/shells', label: 'Shells' },
       { href: '/vouchers', label: 'Vouchers' },
-      { href: '/auto-vouchers', label: 'Auto Vouchers' },
     ],
   },
   {

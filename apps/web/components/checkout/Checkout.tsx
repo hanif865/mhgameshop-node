@@ -152,19 +152,6 @@ export function Checkout({ product }: { product: CheckoutProduct }) {
                   }
                 />
               ))}
-              {product.comboPackages.map((c) => (
-                <PackageTile
-                  key={`c-${c.id}`}
-                  title={c.title}
-                  price={c.price}
-                  combo
-                  outOfStock={c.stock <= 0}
-                  active={selection?.kind === 'combo' && selection.id === c.id}
-                  onClick={() =>
-                    setSelection({ kind: 'combo', id: c.id, price: c.price, stock: c.stock })
-                  }
-                />
-              ))}
             </div>
           </section>
 

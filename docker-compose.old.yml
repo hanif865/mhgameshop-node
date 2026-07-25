@@ -1,0 +1,77 @@
+# old.mhgameshop — মূল সাইট থেকে সম্পূর্ণ আলাদা স্ট্যাক।
+# নিজস্ব DB/redis, আলাদা host পোর্ট। worker ও caddy নেই —
+# রাউটিং মূল mhgameshop-caddy করে (172.18.0.1:port দিয়ে)।
+# চালানো: docker compose -p old-mhgameshop -f docker-compose.old.yml up -d --build
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - old_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    restart: always
+    command: redis-server --appendonly yes
+    volumes:
+      - old_redisdata:/data
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    restart: always
+    env_file:
+      - apps/api/.env
+    ports:
+      - "4001:4000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    volumes:
+      - old_uploads:/app/apps/api/public/storage
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+    restart: always
+    environment:
+      INTERNAL_API_URL: http://api:4000
+    ports:
+      - "3100:3000"
+    depends_on:
+      - api
+
+  admin:
+    build:
+      context: .
+      dockerfile: apps/admin/Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+    restart: always
+    environment:
+      INTERNAL_API_URL: http://api:4000
+    ports:
+      - "3101:3001"
+    depends_on:
+      - api
+
+volumes:
+  old_pgdata:
+  old_redisdata:
+  old_uploads:
