@@ -64,6 +64,12 @@ const SECTIONS: Section[] = [
     ],
   },
   {
+    title: 'Like Sale (amartopupbd)',
+    fields: [
+      { key: 'like_api_key', label: 'Like API Key (ATB-...)', type: 'password' },
+    ],
+  },
+  {
     title: 'Referral Program',
     fields: [
       { key: 'referral_enabled', label: 'Enable Referral', type: 'toggle' },

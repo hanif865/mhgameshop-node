@@ -16,6 +16,7 @@ import { configurePassport, passport } from './config/passport';
 import { ensureSpinTable } from './services/spin.service';
 import { ensureTelegramDiscountColumn } from './services/order.service';
 import { ensureSavedAccountsTable } from './services/savedAccount.service';
+import { ensureVoucherReplacementsTable } from './services/pool.service';
 
 import authRoutes from './routes/auth';
 import productRoutes from './routes/products';
@@ -91,6 +92,7 @@ async function bootstrap() {
   await ensureSpinTable().catch((e) => logger.error('spin table ensure failed: ' + e.message));
   await ensureTelegramDiscountColumn().catch((e) => logger.error('tg discount column ensure failed: ' + e.message));
   await ensureSavedAccountsTable().catch((e) => logger.error('saved_accounts ensure failed: ' + e.message));
+  await ensureVoucherReplacementsTable().catch((e) => logger.error('voucher_replacements ensure failed: ' + e.message));
 
   const server = http.createServer(app);
   initSocket(server); // attach Socket.io

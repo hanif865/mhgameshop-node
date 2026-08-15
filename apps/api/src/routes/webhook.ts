@@ -8,8 +8,8 @@ import { verifyPayment } from '../providers/uddoktapay.provider';
 import { completeOrder } from '../services/order.service';
 import { completeDeposit } from '../services/deposit.service';
 import { maybeFinalize, cancelAndRefund } from '../services/combo-order.service';
-import { restorePoolCodes, markPoolCodesInvalid } from '../services/pool.service';
-import { comboItemUpdate } from '../services/notification.service';
+import { restorePoolCodes, markPoolCodesInvalid, retryConsumedPool } from '../services/pool.service';
+import { comboItemUpdate, sendTelegram } from '../services/notification.service';
 import { emitOrderStatus } from '../realtime';
 
 const router = Router();
@@ -175,12 +175,14 @@ router.post(
     let rawOrderId = req.body?.orderid ?? req.body?.merchant_order_id;
     let status = req.body?.status;
     let content = req.body?.content ?? req.body?.message ?? null;
+    let batchArr: Array<{ ok?: boolean; detail?: string; uc?: number | string }> | null = null;
 
     // PinBot sends content as { batch: [{ ok, detail, uc|package }] } and can
     // report 'partial'. Flatten it to the plain string / success|failed shape
     // the rest of this handler (and CANCEL_CONTENTS) already understands.
     if (content && typeof content === 'object' && Array.isArray((content as any).batch)) {
-      const batch = (content as any).batch as Array<{ ok?: boolean; detail?: string }>;
+      const batch = (content as any).batch as Array<{ ok?: boolean; detail?: string; uc?: number | string }>;
+      batchArr = batch;
       const details = batch
         .map((b) => String(b.detail ?? '').replace(/[✅❌]/g, '').trim())
         .filter(Boolean);
@@ -197,7 +199,7 @@ router.post(
 
     // ৫টার বেশি কোড লাগলে পুল অর্ডার ভাগ হয়ে যায় এবং orderid হয়
     // "{orderId}-b2"। সেটা কম্বো সাব-আইটেম নয় — মূল অর্ডারেরই ফল।
-    const poolBatch = String(rawOrderId).match(/^(\d+)-b\d+$/i);
+    const poolBatch = String(rawOrderId).match(/^(\d+)-(?:b|r)\d+$/i);
     const isPoolBatch = !!poolBatch;
     if (poolBatch) rawOrderId = poolBatch[1];
 
@@ -250,6 +252,28 @@ router.post(
     const laterFailure = isPoolBatch && status !== 'success' && order.status === 'completed';
     if (!laterFailure && (order.status === 'completed' || order.status === 'cancelled')) {
       return res.json({ message: 'Already processed' });
+    }
+
+    // পুল-backed অর্ডারে কোনো কোড consumed হলে অটো নতুন কোড পাঠাই (retry ১ বার)।
+    // সফল ডেলিভারির আগে এটা চালাই — নইলে আংশিক ডেলিভারিও 'completed' দেখাত।
+    if (batchArr) {
+      const outcome = await retryConsumedPool(order as any, batchArr);
+      if (outcome === 'retried') {
+        return res.json({ message: 'Consumed code auto-retried' });
+      }
+      if (outcome === 'no_stock' || outcome === 'exhausted') {
+        await prisma.order.update({ where: { id: order.id }, data: { status: 'hold' } });
+        await emitOrderStatus(order.id);
+        await sendTelegram(
+          `⚠️ <b>অর্ডার #${order.id} আটকে রাখা হলো</b>\n` +
+            `একটি ভাউচার কোড consumed — ` +
+            (outcome === 'no_stock' ? 'পুলে রিপ্লেসমেন্ট স্টক নেই।' : 'অটো-রিট্রাইয়ের পরেও ঠিক হয়নি।') +
+            `\nঅনুগ্রহ করে হাতে দেখুন (টাকা ফেরত দেওয়া হয়নি)।`,
+        ).catch(() => {});
+        logger.error(`🛑 Order ${order.id} held (consumed, ${outcome})`);
+        return res.json({ message: 'Consumed — admin notified, order held' });
+      }
+      // 'none' → নিচে স্বাভাবিক প্রবাহ
     }
 
     if (status === 'success') {

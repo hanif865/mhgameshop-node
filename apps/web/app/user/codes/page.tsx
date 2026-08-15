@@ -47,12 +47,7 @@ export default function CodesPage() {
     <div>
       <div className="mb-4 flex items-center justify-between gap-3">
         <h1 className="text-xl font-extrabold text-slate-800">My Codes</h1>
-        <a
-          href={redeemUrl}
-          target="_blank"
-          rel="noreferrer"
-          className="btn-gold px-4 py-2 text-sm"
-        >
+        <a href={redeemUrl} target="_blank" rel="noreferrer" className="btn-gold px-4 py-2 text-sm">
           <Gift size={16} /> Redeem Code
         </a>
       </div>

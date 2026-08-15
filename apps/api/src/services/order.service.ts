@@ -5,9 +5,10 @@ import { HttpError } from '../middleware/error';
 import { env } from '../config/env';
 import { logger } from '../utils/logger';
 import { placeOrder } from '../providers/topup';
+import { sendLike, type LikeKind } from '../providers/like.provider';
 import { tryPoolTopup, tryPoolVoucherSale, restorePoolCodes, poolStockFor } from './pool.service';
 import { createPayment } from '../providers/uddoktapay.provider';
-import { newOrder } from './notification.service';
+import { newOrder, notifyUser } from './notification.service';
 import { processComboTopup } from './combo-order.service';
 import { enqueueAutoTopup } from '../queue';
 import { emitOrderStatus } from '../realtime';
@@ -283,6 +284,17 @@ async function fulfilOrder(order: any): Promise<void> {
     return;
   }
 
+  // Like সেল — সিঙ্ক্রোনাস amartopupbd API ডেলিভারি (provider webhook নেই)।
+  const likeKind = likeKindOf(order.variation?.providerProductId);
+  if (likeKind) {
+    await prisma.order.update({ where: { id: order.id }, data: { status: 'processing' } });
+    const lf = await loadOrder(order.id);
+    await newOrder(lf);
+    await emitOrderStatus(order.id);
+    await deliverLike(lf, likeKind);
+    return;
+  }
+
   const isVoucher = order.product.type === 'voucher';
 
   if (isVoucher) {
@@ -301,6 +313,55 @@ async function fulfilOrder(order: any): Promise<void> {
   await emitOrderStatus(order.id);
 
   if (!isVoucher) await processAutoTopup(fresh);
+}
+
+// ---------------------------------------------------------------------------
+// Like sale — amartopupbd API (সিঙ্ক্রোনাস: কল করলেই ফল, webhook নেই)
+// ভ্যারিয়েশনের Provider Product ID = 'like' বা 'maxlike' দিয়ে চেনা হয়।
+// ---------------------------------------------------------------------------
+function likeKindOf(pid?: string | null): LikeKind | null {
+  const v = String(pid ?? '').trim().toLowerCase();
+  if (v === 'like') return 'like';
+  if (v === 'maxlike' || v === 'max' || v === 'max_like' || v === 'maxlikes') return 'maxlike';
+  return null;
+}
+
+async function deliverLike(order: any, kind: LikeKind): Promise<void> {
+  const uid = String((order.accountInfo as any)?.player_id ?? '').trim();
+  if (!uid) return refundLike(order, 'UID পাওয়া যায়নি।');
+
+  const r = await sendLike(kind, uid);
+  if (r.ok) {
+    const note = [r.nickname, `${r.likes} likes`, r.region].filter(Boolean).join(' • ');
+    await prisma.order.update({
+      where: { id: order.id },
+      data: { status: 'completed', voucherCode: note || `${r.likes} likes` },
+    });
+    await emitOrderStatus(order.id);
+    logger.info(`👍 Like order ${order.id} completed — ${r.likes} likes (uid ${uid})`);
+    notifyUser(
+      order.userId,
+      `👍 <b>লাইক সম্পন্ন!</b>\n\nUID: <code>${uid}</code>\n` +
+        (r.nickname ? `নাম: ${r.nickname}\n` : '') +
+        `লাইক দেওয়া হয়েছে: <b>${r.likes}</b>`,
+    ).catch(() => {});
+  } else {
+    await refundLike(order, r.message ?? 'লাইক দেওয়া যায়নি (হয়তো দৈনিক লিমিট শেষ)।');
+  }
+}
+
+async function refundLike(order: any, reason: string): Promise<void> {
+  await prisma.order.update({
+    where: { id: order.id },
+    data: { status: 'cancelled', voucherCode: reason },
+  });
+  await cancelOrder(order); // ব্যালান্স ফেরত
+  await emitOrderStatus(order.id);
+  logger.warn(`↩️ Like order ${order.id} refunded — ${reason}`);
+  notifyUser(
+    order.userId,
+    `❌ <b>লাইক অর্ডার #${order.id} বাতিল</b>\n${reason}\nটাকা ফেরত দেওয়া হয়েছে।`,
+  ).catch(() => {});
 }
 
 // ---------------------------------------------------------------------------

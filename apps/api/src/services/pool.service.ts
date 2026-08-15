@@ -2,6 +2,8 @@ import { prisma } from '../config/database';
 import { logger } from '../utils/logger';
 import { placePoolOrder } from '../providers/pinbot.provider';
 import { emitOrderStatus } from '../realtime';
+import { gs } from '../utils/settings';
+import { notifyUser } from './notification.service';
 
 /**
  * UC voucher pool fulfilment.
@@ -268,4 +270,172 @@ export async function tryPoolTopup(order: any): Promise<boolean> {
   await syncAfterPoolChange(recipe);
 
   return true;
+}
+
+/** consumed / already used জাতীয় detail? */
+function isConsumedDetail(detail: string): boolean {
+  return /consumed|already\s*(used|redeem)/i.test(String(detail ?? ''));
+}
+
+/**
+ * অটো-টপআপ ব্যাচের ফলে যেসব কোড "consumed / already used" এসেছে, সেগুলোর
+ * বদলে পুল থেকে একই UC-এর নতুন কোড রিজার্ভ করে provider এ আবার পাঠায় (suffix -r1)।
+ * রিট্রাই শুধু ১ বার — voucher_replacements এ এই অর্ডারের লগ থাকলে আর নয়।
+ *
+ * @returns
+ *   'retried'   — নতুন কোড পাঠানো হয়েছে (অর্ডার autoprocessing এ রাখুন)
+ *   'no_stock'  — রিপ্লেসমেন্ট স্টক নেই (admin দেখবে)
+ *   'exhausted' — আগেই রিট্রাই হয়েছে / uc জানা নেই (admin দেখবে)
+ *   'none'      — consumed নেই বা পুল-backed নয় (স্বাভাবিক প্রবাহে যান)
+ */
+export async function retryConsumedPool(
+  order: { id: number; userId: number; variationId?: number | null; comboPackageId?: number | null; accountInfo?: any },
+  batch: Array<{ ok?: boolean; detail?: string; uc?: number | string }>,
+): Promise<'retried' | 'no_stock' | 'exhausted' | 'none'> {
+  const consumed = (batch ?? []).filter((b) => !b.ok && isConsumedDetail(String(b.detail ?? '')));
+  if (!consumed.length) return 'none';
+
+  const ref = packOf(order);
+  const recipe = ref ? await getRecipe(ref) : [];
+  if (!recipe.length) return 'none'; // পুল-backed নয় → স্বাভাবিক (cancel+refund)
+
+  const [{ n }] = await prisma.$queryRaw<{ n: bigint }[]>`
+    SELECT COUNT(*)::bigint AS n FROM voucher_replacements WHERE order_id = ${order.id}`;
+  if (Number(n) > 0) return 'exhausted'; // ইতিমধ্যে ১ বার রিট্রাই হয়েছে
+
+  // প্রতিটা consumed এর UC — ব্যাচে থাকলে সেটা, নইলে single-uc প্যাকের recipe থেকে
+  const ucs: number[] = [];
+  for (const c of consumed) {
+    const uc = Number(c.uc);
+    if (Number.isFinite(uc) && uc > 0) ucs.push(uc);
+  }
+  if (ucs.length < consumed.length) {
+    if (recipe.length === 1) {
+      ucs.length = 0;
+      for (let i = 0; i < consumed.length; i++) ucs.push(recipe[0].uc);
+    } else {
+      return 'exhausted'; // কোন UC রিপ্লেস করতে হবে নিশ্চিত নয় — admin দেখবে
+    }
+  }
+
+  let fresh: string[];
+  try {
+    fresh = await prisma.$transaction(async (tx) => {
+      const out: string[] = [];
+      for (const uc of ucs) {
+        const [row] = await tx.$queryRaw<{ id: number; code: string }[]>`
+          SELECT id, code FROM voucher_pool WHERE uc = ${uc} AND status = 'available'
+           ORDER BY id LIMIT 1 FOR UPDATE SKIP LOCKED`;
+        if (!row) throw new Error('NO_STOCK');
+        await tx.$executeRaw`
+          UPDATE voucher_pool SET status = 'sold', order_id = ${order.id}, updated_at = NOW() WHERE id = ${row.id}`;
+        await tx.$executeRaw`
+          INSERT INTO voucher_replacements (order_id, user_id, old_code, new_code, uc)
+          VALUES (${order.id}, ${order.userId}, 'auto-consumed', ${row.code}, ${uc})`;
+        out.push(row.code);
+      }
+      return out;
+    });
+  } catch (e) {
+    if ((e as Error).message === 'NO_STOCK') return 'no_stock';
+    throw e;
+  }
+
+  await syncAfterPoolChange(ucs.map((uc) => ({ uc, qty: 1 })));
+  await placePoolOrder(order, fresh, '-r1');
+  logger.warn(`🔄 Auto-retry order ${order.id}: ${fresh.length} replacement code(s) sent (consumed)`);
+  return 'retried';
+}
+
+/** voucher_replacements টেবিল না থাকলে বানায় (বুট-টাইমে, idempotent)। */
+export async function ensureVoucherReplacementsTable(): Promise<void> {
+  await prisma.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS voucher_replacements (
+      id SERIAL PRIMARY KEY,
+      order_id INTEGER,
+      user_id INTEGER,
+      old_code TEXT,
+      new_code TEXT,
+      uc INTEGER,
+      created_at TIMESTAMP DEFAULT now()
+    )`);
+}
+
+/**
+ * কাস্টমার একটা ভাউচার কোড "কাজ করছে না / already consumed" রিপোর্ট করলে
+ * পুল থেকে একই UC-এর নতুন কোড দিয়ে অটো-রিপ্লেস করে।
+ *
+ * নিরাপত্তা/অপব্যবহার রোধ:
+ *  • কোডটা অবশ্যই এই ইউজারের ঐ অর্ডারে ও পুলে 'sold' হতে হবে
+ *  • প্রতি কোড একবারই (রিপ্লেসের পর পুরনোটা 'invalid' → আর নেওয়া যায় না)
+ *  • প্রতি ইউজার দৈনিক লিমিট (setting: voucher_replace_daily_limit, ডিফল্ট 3)
+ *  • প্রতিটি রিপ্লেস voucher_replacements এ লগ হয়
+ */
+export async function replaceConsumedVoucher(
+  userId: number,
+  orderId: number,
+  badCode: string,
+): Promise<{ old: string; newCode: string }> {
+  const code = String(badCode ?? '').replace(/\s+/g, ' ').trim().toUpperCase();
+  if (!code) throw new Error('কোড দিন।');
+
+  const order = await prisma.order.findFirst({
+    where: { id: orderId, userId, status: 'completed' },
+    select: { id: true, voucherCode: true },
+  });
+  if (!order || !order.voucherCode) throw new Error('অর্ডার পাওয়া যায়নি।');
+
+  const codes = order.voucherCode.split(',').map((c) => c.trim());
+  const idx = codes.findIndex((c) => c.toUpperCase() === code);
+  if (idx === -1) throw new Error('এই কোডটি এই অর্ডারে নেই।');
+
+  const [poolRow] = await prisma.$queryRaw<{ id: number; uc: number; status: string; order_id: number | null }[]>`
+    SELECT id, uc, status, order_id FROM voucher_pool WHERE UPPER(code) = ${code} LIMIT 1`;
+  if (!poolRow) throw new Error('এই কোডটি পুল থেকে আসেনি — সাপোর্টে যোগাযোগ করুন।');
+  if (poolRow.status !== 'sold' || poolRow.order_id !== orderId) {
+    throw new Error('এই কোড আগেই রিপ্লেস বা প্রসেস হয়েছে।');
+  }
+
+  const s = await gs();
+  const limit = s.int('voucher_replace_daily_limit', 3);
+  const [{ n }] = await prisma.$queryRaw<{ n: bigint }[]>`
+    SELECT COUNT(*)::bigint AS n FROM voucher_replacements
+     WHERE user_id = ${userId} AND created_at > NOW() - INTERVAL '24 hours'`;
+  if (Number(n) >= limit) throw new Error('আজকের রিপ্লেস লিমিট শেষ — সাপোর্টে যোগাযোগ করুন।');
+
+  const noteAppend = ` [replaced: customer reported consumed, order ${orderId}]`;
+  const fresh = await prisma.$transaction(async (tx) => {
+    const [row] = await tx.$queryRaw<{ id: number; code: string }[]>`
+      SELECT id, code FROM voucher_pool
+       WHERE uc = ${poolRow.uc} AND status = 'available'
+       ORDER BY id LIMIT 1 FOR UPDATE SKIP LOCKED`;
+    if (!row) throw new Error('দুঃখিত, এই মুহূর্তে রিপ্লেসমেন্ট কোড নেই — সাপোর্টে যোগাযোগ করুন।');
+
+    await tx.$executeRaw`
+      UPDATE voucher_pool SET status = 'invalid', note = COALESCE(note, '') || ${noteAppend}, updated_at = NOW()
+       WHERE id = ${poolRow.id}`;
+    await tx.$executeRaw`
+      UPDATE voucher_pool SET status = 'sold', order_id = ${orderId}, updated_at = NOW()
+       WHERE id = ${row.id}`;
+
+    codes[idx] = row.code;
+    await tx.order.update({ where: { id: orderId }, data: { voucherCode: codes.join(',') } });
+
+    await tx.$executeRaw`
+      INSERT INTO voucher_replacements (order_id, user_id, old_code, new_code, uc)
+      VALUES (${orderId}, ${userId}, ${code}, ${row.code}, ${poolRow.uc})`;
+    return row;
+  });
+
+  await syncPacksForUc(poolRow.uc).catch(() => null);
+  logger.warn(`🔄 Voucher replaced (order ${orderId}, user ${userId}): ${code} → ${fresh.code}`);
+  notifyUser(
+    userId,
+    `🔄 <b>ভাউচার রিপ্লেস</b>
+
+অর্ডার #${orderId} এর একটি কোড বদলে নতুন কোড দেওয়া হয়েছে:
+<code>${fresh.code}</code>`,
+  ).catch(() => {});
+
+  return { old: code, newCode: fresh.code };
 }
