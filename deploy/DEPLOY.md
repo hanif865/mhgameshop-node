@@ -10,8 +10,8 @@ Each app is exposed on its own port; nginx is skipped.
 
 ```bash
 # 1. bootstrap (installs docker etc.)
-export REPO_URL=https://github.com/Mahmud865/mhgameshop-node.git
-curl -fsSL https://raw.githubusercontent.com/Mahmud865/mhgameshop-node/main/deploy/vps-setup.sh | bash
+export REPO_URL=https://github.com/hanif865/mhgameshop-node.git
+curl -fsSL https://raw.githubusercontent.com/hanif865/mhgameshop-node/main/deploy/vps-setup.sh | bash
 cd /opt/mhgameshop
 
 # 2. open app ports
@@ -70,8 +70,8 @@ and set `COOKIE_SECURE=true`.
 
 ```bash
 ssh root@YOUR_VPS_IP
-export REPO_URL=git@github.com:YOU/mhgameshop-node.git   # or https://...
-curl -fsSL https://raw.githubusercontent.com/YOU/mhgameshop-node/main/deploy/vps-setup.sh | bash
+export REPO_URL=git@github.com:hanif865/mhgameshop-node.git   # or https://...
+curl -fsSL https://raw.githubusercontent.com/hanif865/mhgameshop-node/main/deploy/vps-setup.sh | bash
 # or: scp the repo up and run  bash deploy/vps-setup.sh
 cd /opt/mhgameshop
 ```
