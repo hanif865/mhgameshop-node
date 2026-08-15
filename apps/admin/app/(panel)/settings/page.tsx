@@ -64,6 +64,20 @@ const SECTIONS: Section[] = [
     ],
   },
   {
+    title: 'Auto Like (Free Fire)',
+    fields: [
+      { key: 'like_gateway', label: 'Like Gateway (amartopupbd / pinbot)' },
+      { key: 'like_api_key', label: 'amartopupbd — Like API Key', type: 'password' },
+      { key: 'like_api_base_url', label: 'amartopupbd — Base URL' },
+      { key: 'pinbot_like_base_url', label: 'PinBot — Like Base URL' },
+      {
+        key: 'pinbot_like_api_key',
+        label: 'PinBot — Like Token (like_ / 100like_ / 200like_)',
+        type: 'password',
+      },
+    ],
+  },
+  {
     title: 'Referral Program',
     fields: [
       { key: 'referral_enabled', label: 'Enable Referral', type: 'toggle' },

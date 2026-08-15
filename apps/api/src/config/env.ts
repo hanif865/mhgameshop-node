@@ -36,6 +36,23 @@ const schema = z.object({
   TOPUPNET_API_KEY: z.string().optional().default(''),
   TOPUPNET_BASE_URL: z.string().default('https://api.topupnet.com/api/v1'),
 
+  // PinBot auto-topup gateway. DB settings `pinbot_api_key` / `pinbot_base_url`
+  // take precedence; these are the env fallbacks. Active only when the
+  // `topup_gateway` setting is 'pinbot'.
+  PINBOT_API_KEY: z.string().optional().default(''),
+  PINBOT_BASE_URL: z.string().optional().default('https://api.pinbot.shop'),
+
+  // Free Fire auto-like (amartopupbd personal API). DB setting `like_api_key`
+  // takes precedence; this is the env fallback.
+  LIKE_API_KEY: z.string().optional().default(''),
+  LIKE_API_BASE_URL: z.string().optional().default('https://admin.amartopupbd.com'),
+
+  // Free Fire auto-like via PinBot (like_ / 100like_ / 200like_ token). DB
+  // settings `pinbot_like_api_key` / `pinbot_like_base_url` take precedence.
+  // Active only when the `like_gateway` setting is 'pinbot'.
+  PINBOT_LIKE_API_KEY: z.string().optional().default(''),
+  PINBOT_LIKE_BASE_URL: z.string().optional().default('https://api.pinbot.shop'),
+
   UDDOKTAPAY_API_KEY: z.string().optional().default(''),
   UDDOKTAPAY_BASE_URL: z.string().optional().default(''),
 

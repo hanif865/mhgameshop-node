@@ -5,6 +5,7 @@ import { HttpError } from '../middleware/error';
 import { env } from '../config/env';
 import { logger } from '../utils/logger';
 import { placeOrder } from '../providers/topup';
+import { placeLikeOrder } from '../providers/like';
 import { tryPoolTopup, tryPoolVoucherSale, restorePoolCodes, poolStockFor } from './pool.service';
 import { createPayment } from '../providers/uddoktapay.provider';
 import { newOrder } from './notification.service';
@@ -354,6 +355,9 @@ export async function processAutoTopup(order: any): Promise<void> {
  * worker can retry; on the final failure the worker refunds the order.
  */
 export async function runAutoTopup(order: any): Promise<void> {
+  // Auto-like has its own synchronous path (no voucher/shell/webhook).
+  if (order.product.type === 'autolike') return runAutoLike(order);
+
   const s = await gs();
 
   if (order.product.type !== 'topup') return;
@@ -412,10 +416,43 @@ export async function runAutoTopup(order: any): Promise<void> {
   await placeOrder(order, autoVoucher ? { id: autoVoucher.id, code: autoVoucher.code } : null);
 }
 
+/**
+ * Auto-like delivery (Free Fire). Gateway (amartopupbd | pinbot) is chosen by
+ * the `like_gateway` setting inside providers/like.ts. Synchronous: call the API,
+ * complete on success, cancel+refund when 0 likes were given. Throwing here
+ * makes the worker retry and finally refund (transient / misconfig cases).
+ */
+async function runAutoLike(order: any): Promise<void> {
+  const result = await placeLikeOrder(order);
+
+  // সফলভাবে কল হলো কিন্তু 0 লাইক (প্লেয়ার আজকের লিমিটে / আগেই ম্যাক্স) —
+  // রিট্রাই অর্থহীন ও API quota নষ্ট করে, তাই এখানেই cancel + refund।
+  if (result.likesGiven <= 0) {
+    logger.warn(`⚠️ AutoLike: 0 likes given (order ${order.id}) — cancelling & refunding`);
+    await cancelAndRefundAutoTopup(order.id);
+    return;
+  }
+
+  const msg =
+    `✅ ${result.likesGiven} likes sent to ${result.nickname}` +
+    (result.region ? ` (${result.region})` : '') +
+    (result.before && result.after ? ` — ${result.before} → ${result.after}` : '');
+
+  await prisma.order.update({
+    where: { id: order.id },
+    data: { status: 'completed', deliveryMessage: msg },
+  });
+  logger.info(`✅ AutoLike done order ${order.id}: ${result.likesGiven} likes → ${result.nickname}`);
+  await emitOrderStatus(order.id);
+}
+
 /** Cancel an auto-topup order and refund the customer (used by the worker). */
 export async function cancelAndRefundAutoTopup(orderId: number): Promise<void> {
   await restorePoolCodes(orderId); // পুল থেকে নেওয়া কোড থাকলে ফেরত দিই
-  const order = await prisma.order.findUnique({ where: { id: orderId } });
+  const order = await prisma.order.findUnique({
+    where: { id: orderId },
+    include: { product: true },
+  });
   if (!order || order.status === 'cancelled') return;
 
   // Release any reserved auto voucher.
@@ -423,6 +460,15 @@ export async function cancelAndRefundAutoTopup(orderId: number): Promise<void> {
     where: { orderId },
     data: { status: 'available', orderId: null },
   });
+
+  // autolike: fulfilOrder এ কমানো ভ্যারিয়েশন স্টক ফেরত দিই (ভাউচার/পুল নেই বলে
+  // উপরের release গুলো no-op; শুধু স্টকটাই ফেরত দেওয়ার আছে)।
+  if (order.product?.type === 'autolike' && order.variationId) {
+    await prisma.variation.update({
+      where: { id: order.variationId },
+      data: { stock: { increment: 1 } },
+    });
+  }
 
   await prisma.order.update({ where: { id: orderId }, data: { status: 'cancelled' } });
   await cancelOrder(order);

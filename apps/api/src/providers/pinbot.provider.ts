@@ -22,11 +22,9 @@ type AutoVoucherLike = { id: number; code: string } | null;
 
 async function conf() {
   const s = await gs();
-  const apiKey = s.str('pinbot_api_key') || process.env.PINBOT_API_KEY || '';
+  const apiKey = s.str('pinbot_api_key') || env.PINBOT_API_KEY;
   const baseUrl = (
-    s.str('pinbot_base_url') ||
-    process.env.PINBOT_BASE_URL ||
-    'https://api.pinbot.shop'
+    s.str('pinbot_base_url') || env.PINBOT_BASE_URL
   ).replace(/\/+$/, '');
   return { apiKey, baseUrl };
 }
