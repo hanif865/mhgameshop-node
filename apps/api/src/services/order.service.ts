@@ -16,6 +16,47 @@ import { emitOrderStatus } from '../realtime';
 
 const ACCOUNT_INFO_TYPES = ['topup', 'ingame', 'subscription', 'autolike'];
 
+// ---------------------------------------------------------------------------
+// নির্দিষ্ট গেম UID-এর মাসে-একবার টপ-আপ লিমিট
+// এই UID-গুলো দিয়ে ৩০ দিনে একটার বেশি টপ-আপ করা যাবে না। শপ-অ্যাকাউন্ট নয়,
+// অর্ডারে দেওয়া গেম UID ধরে ঠেকানো হয় — যেই ইউজারই দিক না কেন।
+// ---------------------------------------------------------------------------
+const UID_MONTHLY_LIMIT = ['3822639560', '8687072002'];
+const UID_LIMIT_MESSAGE =
+  'আপনাকে গেরেনা ব্লক করে দিছে তাই আপনি আগামি ৩০ দিন আর টপ আপ করতে পারবেন না';
+
+/** ইনকামিং accountInfo-এর কোনো ফিল্ডের মান লিমিটেড UID কিনা — হলে সেই UID ফেরত দেয়। */
+function limitedUidIn(accountInfo: Record<string, string> | null): string | null {
+  if (!accountInfo) return null;
+  for (const v of Object.values(accountInfo)) {
+    const uid = String(v ?? '').trim();
+    if (UID_MONTHLY_LIMIT.includes(uid)) return uid;
+  }
+  return null;
+}
+
+/**
+ * লিমিটেড UID হলে — গত ৩০ দিনে এই UID দিয়ে বাতিল-নয় এমন কোনো অর্ডার থাকলে
+ * নতুন টপ-আপ আটকে দিই (যেকোনো ইউজার)। pending (টাকা দেওয়া হয়নি) ও cancelled
+ * (রিফান্ড হয়ে গেছে) গোনায় ধরি না। order.create-এর আগে ডাকা হয়।
+ */
+async function assertUidTopupAllowed(accountInfo: Record<string, string> | null): Promise<void> {
+  const uid = limitedUidIn(accountInfo);
+  if (!uid) return;
+  const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+  const rows = await prisma.$queryRaw<{ n: number }[]>`
+    SELECT 1 AS n FROM orders
+    WHERE created_at >= ${cutoff}
+      AND status::text NOT IN ('pending', 'cancelled')
+      AND account_info IS NOT NULL
+      AND jsonb_typeof(account_info) = 'object'
+      AND EXISTS (
+        SELECT 1 FROM jsonb_each_text(account_info) AS kv(k, v) WHERE kv.v = ${uid}
+      )
+    LIMIT 1`;
+  if (rows.length > 0) throw new HttpError(422, UID_LIMIT_MESSAGE);
+}
+
 /**
  * এই ইউজারের জন্য এই প্যাকেজে আলাদা দাম বসানো থাকলে সেটা, নইলে fallback।
  * user_prices raw টেবিল (schema.prisma এর বাইরে), তাই $queryRaw।
@@ -81,6 +122,10 @@ export async function addOrder(input: AddOrderInput): Promise<AddOrderResult> {
   const quantity = Math.max(1, input.quantity ?? 1);
 
   const source = input.source ?? 'web';
+
+  // নির্দিষ্ট UID-গুলোর মাসে-একবার লিমিট (normal + combo — dispatch-এর আগেই চেক)
+  await assertUidTopupAllowed(input.accountInfo);
+
   if (input.variationId.startsWith('combo-')) {
     return addComboOrder({ ...input, quantity, source });
   }
