@@ -101,6 +101,18 @@ const SECTIONS: Section[] = [
     ],
   },
   {
+    title: 'Top Ranked Users',
+    fields: [
+      { key: 'top_users_enabled', label: 'Enable Top Ranked Users', type: 'toggle' },
+      { key: 'top_users_monthly', label: 'Monthly reset (off = all-time)', type: 'toggle' },
+      { key: 'top_users_count', label: 'How many to show (default 10)' },
+      { key: 'top_tier_silver_min', label: 'Silver tier min ৳' },
+      { key: 'top_tier_gold_min', label: 'Gold tier min ৳' },
+      { key: 'top_tier_platinum_min', label: 'Platinum tier min ৳' },
+      { key: 'top_tier_diamond_min', label: 'Diamond tier min ৳' },
+    ],
+  },
+  {
     title: 'Telegram Notifications',
     fields: [
       { key: 'telegram_bot_token', label: 'Bot Token', type: 'password' },

@@ -5,6 +5,7 @@ import { NoticeBar } from '@/components/home/NoticeBar';
 import { HeroSlider } from '@/components/home/HeroSlider';
 import { ProductCard, type ProductLite } from '@/components/home/ProductCard';
 import { LatestOrders } from '@/components/home/LatestOrders';
+import { TopRankedUsers, type TopUser } from '@/components/home/TopRankedUsers';
 
 interface Product extends ProductLite {
   category: { id: number; title: string; orderColumn?: number } | null;
@@ -15,15 +16,17 @@ interface Product extends ProductLite {
 export const dynamic = 'force-dynamic';
 
 export default async function HomePage() {
-  const [productsRes, slidersRes, ordersRes] = await Promise.all([
+  const [productsRes, slidersRes, ordersRes, topUsersRes] = await Promise.all([
     apiGet<Product[]>('/api/products', 60),
     apiGet<any[]>('/api/sliders', 60),
     apiGet<any[]>('/api/home/latest-orders', 15),
+    apiGet<TopUser[]>('/api/home/top-users', 300),
   ]);
 
   const products = productsRes.data ?? [];
   const sliders = slidersRes.data ?? [];
   const latestOrders = ordersRes.data ?? [];
+  const topUsers = topUsersRes.data ?? [];
 
   // Group products by category, then order the groups by the category's
   // order_column (managed from the admin panel).
@@ -68,6 +71,8 @@ export default async function HomePage() {
         </div>
 
         <LatestOrders orders={latestOrders} />
+
+        <TopRankedUsers users={topUsers} />
 
         {/* Telegram bot promo */}
         <section className="overflow-hidden rounded-2xl bg-gradient-to-r from-sky-500 to-indigo-600 p-6 text-white shadow-lg sm:p-8">

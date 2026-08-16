@@ -3,8 +3,21 @@ import { prisma } from '../config/database';
 import { asyncHandler } from '../middleware/error';
 import { ok } from '../utils/response';
 import { remember, CACHE_KEYS } from '../utils/cache';
+import { gs, Settings } from '../utils/settings';
 
 const router = Router();
+
+type Tier = 'diamond' | 'platinum' | 'gold' | 'silver' | 'bronze';
+
+// চলতি মাসের (বা all-time) মোট খরচ থেকে metal tier ঠিক করি — থ্রেশহোল্ড admin-এ এডিটযোগ্য,
+// তাই tier-এর একমাত্র উৎস এখানে (frontend শুধু রঙ+আইকন ম্যাপ করে)।
+function tierFor(total: number, s: Settings): Tier {
+  if (total >= s.int('top_tier_diamond_min', 40000)) return 'diamond';
+  if (total >= s.int('top_tier_platinum_min', 15000)) return 'platinum';
+  if (total >= s.int('top_tier_gold_min', 5000)) return 'gold';
+  if (total >= s.int('top_tier_silver_min', 2000)) return 'silver';
+  return 'bronze';
+}
 
 // Whitelist — ONLY these settings are exposed publicly. Everything else
 // (provider URLs, API config, telegram, smtp, etc.) stays private.
@@ -88,6 +101,61 @@ router.get(
         avatar: o.user?.avatar ?? o.user?.googleAvatar ?? null,
       }));
     });
+    return ok(res, items);
+  }),
+);
+
+// GET /api/home/top-users — চলতি মাসের (বা all-time) সর্বোচ্চ খরচকারী ইউজার + metal tier।
+// LatestOrders-এর মতোই শুধু safe field (নাম+অ্যাভাটার) পাবলিক করে; email/phone/balance কখনো না।
+router.get(
+  '/home/top-users',
+  asyncHandler(async (_req, res) => {
+    const s = await gs();
+    if (!s.bool('top_users_enabled', true)) return ok(res, []);
+
+    const count = Math.min(Math.max(s.int('top_users_count', 10), 1), 50);
+    const monthly = s.bool('top_users_monthly', true);
+
+    const items = await remember('mhgs:cache:top-users', 300, async () => {
+      const start = new Date();
+      start.setDate(1);
+      start.setHours(0, 0, 0, 0);
+
+      const grp = await prisma.order.groupBy({
+        by: ['userId'],
+        where: {
+          status: 'completed',
+          user: { role: 'user', status: 1 }, // admin/reseller/banned বাদ
+          ...(monthly ? { createdAt: { gte: start } } : {}),
+        },
+        _sum: { amount: true },
+        orderBy: { _sum: { amount: 'desc' } },
+        take: count,
+      });
+      if (grp.length === 0) return [];
+
+      // groupBy রিলেশন include করতে পারে না — তাই নাম/অ্যাভাটার আলাদা করে hydrate করি।
+      const users = await prisma.user.findMany({
+        where: { id: { in: grp.map((g) => g.userId) } },
+        select: { id: true, name: true, avatar: true, googleAvatar: true },
+      });
+      const byId = new Map(users.map((u) => [u.id, u]));
+
+      return grp
+        .map((g, i) => {
+          const u = byId.get(g.userId);
+          const total = Number(g._sum.amount ?? 0); // Decimal → Number
+          return {
+            rank: i + 1,
+            user: u?.name ?? 'User',
+            avatar: u?.avatar ?? u?.googleAvatar ?? null,
+            total,
+            tier: tierFor(total, s),
+          };
+        })
+        .filter((r) => r.total > 0);
+    });
+
     return ok(res, items);
   }),
 );

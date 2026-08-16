@@ -22,6 +22,14 @@ const DEFAULT_SETTINGS: Record<string, string> = {
   enable_auto_topup: '0',
   topup_provider: 'freefire',
   free_fire_server_url: 'https://api.topupnet.com/api/v1',
+  // Top Ranked Users — home leaderboard + metal-tier badge (routes/public.ts:/home/top-users)
+  top_users_enabled: '1',
+  top_users_monthly: '1',
+  top_users_count: '10',
+  top_tier_silver_min: '2000',
+  top_tier_gold_min: '5000',
+  top_tier_platinum_min: '15000',
+  top_tier_diamond_min: '40000',
 };
 
 async function main() {
