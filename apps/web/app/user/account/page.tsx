@@ -1,10 +1,20 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Loader2 } from 'lucide-react';
+import Link from 'next/link';
+import { Loader2, Ticket, ArrowLeftRight, Sparkles, Gift } from 'lucide-react';
 import { apiGet, apiPut } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { useToast } from '@/components/ui/Toast';
+import { MyBonusLevel } from '@/components/user/MyBonusLevel';
+
+// মোবাইল quick-links — ডেস্কটপে UserSidebar এগুলো দেখায়; Codes bottom-nav-এ নেই বলে এখানে প্রমিনেন্ট রাখা
+const QUICK_LINKS = [
+  { href: '/user/codes', label: 'My Codes', Icon: Ticket },
+  { href: '/user/transactions', label: 'Transactions', Icon: ArrowLeftRight },
+  { href: '/user/spin', label: 'Spin & Win', Icon: Sparkles },
+  { href: '/user/referral', label: 'Refer', Icon: Gift },
+];
 
 export default function AccountPage() {
   const { user, refresh } = useAuth();
@@ -14,18 +24,27 @@ export default function AccountPage() {
   const [avatar, setAvatar] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [bonus, setBonus] = useState<{ totalSpent: number; level: any; levels: any[] } | null>(null);
 
   useEffect(() => {
-    apiGet<{ name: string; phone: string | null; avatar: string | null }>('/api/user/profile').then(
-      (res) => {
-        const d = res.data as any;
-        if (d) {
-          setName(d.name ?? '');
-          setPhone(d.phone ?? '');
-          setAvatar(d.avatar ?? '');
+    apiGet<{
+      name: string;
+      phone: string | null;
+      avatar: string | null;
+      totalSpent: number;
+      level: any;
+      levels: any[];
+    }>('/api/user/profile').then((res) => {
+      const d = res.data as any;
+      if (d) {
+        setName(d.name ?? '');
+        setPhone(d.phone ?? '');
+        setAvatar(d.avatar ?? '');
+        if (d.level && d.levels) {
+          setBonus({ totalSpent: Number(d.totalSpent ?? 0), level: d.level, levels: d.levels });
         }
-      },
-    );
+      }
+    });
   }, []);
 
   async function save(e: React.FormEvent) {
@@ -50,6 +69,26 @@ export default function AccountPage() {
   return (
     <div>
       <h1 className="mb-4 text-xl font-extrabold text-slate-800">Account</h1>
+
+      {bonus && (
+        <div className="mb-4">
+          <MyBonusLevel totalSpent={bonus.totalSpent} level={bonus.level} levels={bonus.levels} />
+        </div>
+      )}
+
+      {/* মোবাইল quick-links (ডেস্কটপে সাইডবার কভার করে) */}
+      <div className="mb-4 grid grid-cols-4 gap-2 md:hidden">
+        {QUICK_LINKS.map((q) => (
+          <Link
+            key={q.href}
+            href={q.href}
+            className="card flex flex-col items-center gap-1 p-3 text-center"
+          >
+            <q.Icon size={20} className="text-primary" />
+            <span className="text-[11px] font-medium leading-tight text-slate-600">{q.label}</span>
+          </Link>
+        ))}
+      </div>
 
       <form onSubmit={save} className="card max-w-lg space-y-4 p-6">
         <div className="flex items-center gap-4">

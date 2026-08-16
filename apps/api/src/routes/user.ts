@@ -9,6 +9,8 @@ import { referralStats, applyReferralCode } from '../services/referral.service';
 import { submitVideo, mySubmissions } from '../services/creator.service';
 import { spinStatus, doSpin } from '../services/spin.service';
 import { listSavedAccounts, saveAccount, removeSavedAccount } from '../services/savedAccount.service';
+import { gs } from '../utils/settings';
+import { levelFor, levelLadder } from '../utils/levels';
 
 const router = Router();
 router.use(requireAuth);
@@ -32,7 +34,14 @@ router.get(
   asyncHandler(async (req, res) => {
     const user = await prisma.user.findUnique({ where: { id: req.userId! } });
     if (!user) throw new HttpError(404, 'User not found.');
-    return ok(res, publicUser(user));
+    // My Bonus & Level কার্ডের ডেটা — ইউজারের lifetime completed খরচ থেকে লেভেল + ৫-ধাপ ল্যাডার
+    const s = await gs();
+    const agg = await prisma.order.aggregate({
+      where: { userId: req.userId!, status: 'completed' },
+      _sum: { amount: true },
+    });
+    const totalSpent = Number(agg._sum.amount ?? 0);
+    return ok(res, { ...publicUser(user), totalSpent, level: levelFor(totalSpent, s), levels: levelLadder(s) });
   }),
 );
 

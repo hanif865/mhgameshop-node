@@ -22,14 +22,22 @@ const DEFAULT_SETTINGS: Record<string, string> = {
   enable_auto_topup: '0',
   topup_provider: 'freefire',
   free_fire_server_url: 'https://api.topupnet.com/api/v1',
-  // Top Ranked Users — home leaderboard + metal-tier badge (routes/public.ts:/home/top-users)
+  // Top Ranked Users — home leaderboard badge (routes/public.ts:/home/top-users)
   top_users_enabled: '1',
   top_users_monthly: '1',
   top_users_count: '10',
-  top_tier_silver_min: '2000',
-  top_tier_gold_min: '5000',
-  top_tier_platinum_min: '15000',
-  top_tier_diamond_min: '40000',
+  // Levels & Discounts — ইউনিফায়েড ৫-লেভেল (utils/levels.ts); discount সব 0 = safe launch,
+  // owner admin থেকে % সেট করলে তবেই checkout-এ ছাড় বসে। min ও discount দুটোই admin-এডিটযোগ্য।
+  level_bronze_min: '2000',
+  level_bronze_discount: '0',
+  level_silver_min: '5000',
+  level_silver_discount: '0',
+  level_gold_min: '10000',
+  level_gold_discount: '0',
+  level_platinum_min: '20000',
+  level_platinum_discount: '0',
+  level_premium_min: '50000',
+  level_premium_discount: '0',
 };
 
 async function main() {

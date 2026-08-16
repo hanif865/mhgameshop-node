@@ -1,5 +1,6 @@
 import { prisma, Prisma } from '@mhgs/database';
 import { gs } from '../utils/settings';
+import { levelFor } from '../utils/levels';
 import { strRandom, money } from '../utils/helpers';
 import { HttpError } from '../middleware/error';
 import { env } from '../config/env';
@@ -37,6 +38,26 @@ export async function ensureTelegramDiscountColumn(): Promise<void> {
   await prisma.$executeRawUnsafe(
     'ALTER TABLE users ADD COLUMN IF NOT EXISTS telegram_discount NUMERIC(16,2) NOT NULL DEFAULT 0',
   );
+}
+
+/**
+ * এই অর্ডারের *আগের* lifetime completed খরচ থেকে এই ইউজারের লেভেল ছাড় %।
+ * order.create-এর আগে ডাকা হয় বলে চলতি অর্ডার নিজে গোনায় পড়ে না।
+ */
+async function levelDiscountPercentFor(userId: number): Promise<number> {
+  const s = await gs();
+  const agg = await prisma.order.aggregate({
+    where: { userId, status: 'completed' },
+    _sum: { amount: true },
+  });
+  return levelFor(Number(agg._sum.amount ?? 0), s).discountPercent;
+}
+
+/** এই ইউজার+প্যাকেজে আলাদা কাস্টম রেট (user_prices) বসানো আছে কিনা — রিসেলার exempt চেক। */
+async function hasUserPrice(userId: number, variationId: number): Promise<boolean> {
+  const rows = await prisma.$queryRaw<{ n: unknown }[]>`
+    SELECT 1 AS n FROM user_prices WHERE user_id = ${userId} AND variation_id = ${variationId} LIMIT 1`;
+  return rows.length > 0;
 }
 
 export interface AddOrderInput {
@@ -95,11 +116,17 @@ async function addNormalOrder(input: Required<AddOrderInput>): Promise<AddOrderR
   // এই ইউজারের জন্য আলাদা দাম বসানো থাকলে সেটাই, নইলে গ্লোবাল দাম
   let price = await priceForUser(input.userId, variation.id, Number(variation.price));
   const buyRate = Number(variation.buyRate);
-  // টেলিগ্রাম থেকে অর্ডার হলে এই ইউজারের ফ্ল্যাট ছাড় (কখনো কেনা-দামের নিচে নয়)
+  // লেভেল % ছাড় — তবে কাস্টম রেট (user_prices) থাকলে রিসেলার exempt, তাই skip
+  const hasOverride = await hasUserPrice(input.userId, variation.id);
+  const levelPercent = hasOverride ? 0 : await levelDiscountPercentFor(input.userId);
+  if (levelPercent > 0) price = price * (1 - levelPercent / 100);
+  // টেলিগ্রাম থেকে অর্ডার হলে এই ইউজারের ফ্ল্যাট ছাড় (লেভেল ছাড়ের সাথে stack)
   if (input.source === 'telegram') {
     const disc = await telegramDiscountFor(input.userId);
-    if (disc > 0) price = Math.max(price - disc, buyRate);
+    if (disc > 0) price = price - disc;
   }
+  // একটাই floor — সব source-এ, কখনো কেনা-দামের নিচে নামবে না
+  price = Math.max(price, buyRate);
   const amount = price * input.quantity;
   const profit = amount > buyRate ? money(amount - buyRate) : '0';
 
@@ -140,10 +167,16 @@ async function addComboOrder(input: Required<AddOrderInput>): Promise<AddOrderRe
 
   let price = Number(combo.price);
   const buyRate = Number(combo.buyRate);
+  // লেভেল % ছাড় (combo-তে user_prices override নেই, তাই সরাসরি)
+  const levelPercent = await levelDiscountPercentFor(input.userId);
+  if (levelPercent > 0) price = price * (1 - levelPercent / 100);
+  // টেলিগ্রাম ফ্ল্যাট ছাড় (লেভেল ছাড়ের সাথে stack)
   if (input.source === 'telegram') {
     const disc = await telegramDiscountFor(input.userId);
-    if (disc > 0) price = Math.max(price - disc, buyRate);
+    if (disc > 0) price = price - disc;
   }
+  // একটাই floor — সব source-এ, কখনো কেনা-দামের নিচে নামবে না
+  price = Math.max(price, buyRate);
   const amount = price * input.quantity;
   const profit = amount > buyRate ? money(amount - buyRate) : '0';
 

@@ -3,21 +3,10 @@ import { prisma } from '../config/database';
 import { asyncHandler } from '../middleware/error';
 import { ok } from '../utils/response';
 import { remember, CACHE_KEYS } from '../utils/cache';
-import { gs, Settings } from '../utils/settings';
+import { gs } from '../utils/settings';
+import { levelFor } from '../utils/levels';
 
 const router = Router();
-
-type Tier = 'diamond' | 'platinum' | 'gold' | 'silver' | 'bronze';
-
-// চলতি মাসের (বা all-time) মোট খরচ থেকে metal tier ঠিক করি — থ্রেশহোল্ড admin-এ এডিটযোগ্য,
-// তাই tier-এর একমাত্র উৎস এখানে (frontend শুধু রঙ+আইকন ম্যাপ করে)।
-function tierFor(total: number, s: Settings): Tier {
-  if (total >= s.int('top_tier_diamond_min', 40000)) return 'diamond';
-  if (total >= s.int('top_tier_platinum_min', 15000)) return 'platinum';
-  if (total >= s.int('top_tier_gold_min', 5000)) return 'gold';
-  if (total >= s.int('top_tier_silver_min', 2000)) return 'silver';
-  return 'bronze';
-}
 
 // Whitelist — ONLY these settings are exposed publicly. Everything else
 // (provider URLs, API config, telegram, smtp, etc.) stays private.
@@ -150,7 +139,7 @@ router.get(
             user: u?.name ?? 'User',
             avatar: u?.avatar ?? u?.googleAvatar ?? null,
             total,
-            tier: tierFor(total, s),
+            tier: levelFor(total, s).name,
           };
         })
         .filter((r) => r.total > 0);
