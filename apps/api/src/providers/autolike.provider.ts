@@ -3,7 +3,7 @@ import { env } from '../config/env';
 import { logger } from '../utils/logger';
 
 /**
- * AutoLike provider — Free Fire like/maxlike (amartopupbd personal API).
+ * AutoLike provider — Free Fire like/maxlike (ffbaazar.shop personal API).
  *
  * Two synchronous GET endpoints (see like-api-doc.md):
  *   GET {base}/like?key={key}&uid={playerId}
@@ -36,7 +36,7 @@ async function conf() {
   const baseUrl = (
     s.str('like_api_base_url') ||
     env.LIKE_API_BASE_URL ||
-    'https://admin.amartopupbd.com'
+    'https://ffbaazar.shop'
   ).replace(/\/+$/, '');
   return { apiKey, baseUrl };
 }

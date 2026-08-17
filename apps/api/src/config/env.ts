@@ -42,10 +42,10 @@ const schema = z.object({
   PINBOT_API_KEY: z.string().optional().default(''),
   PINBOT_BASE_URL: z.string().optional().default('https://api.pinbot.shop'),
 
-  // Free Fire auto-like (amartopupbd personal API). DB setting `like_api_key`
+  // Free Fire auto-like (ffbaazar.shop personal API). DB setting `like_api_key`
   // takes precedence; this is the env fallback.
   LIKE_API_KEY: z.string().optional().default(''),
-  LIKE_API_BASE_URL: z.string().optional().default('https://admin.amartopupbd.com'),
+  LIKE_API_BASE_URL: z.string().optional().default('https://ffbaazar.shop'),
 
   // Free Fire auto-like via PinBot (like_ / 100like_ / 200like_ token). DB
   // settings `pinbot_like_api_key` / `pinbot_like_base_url` take precedence.
