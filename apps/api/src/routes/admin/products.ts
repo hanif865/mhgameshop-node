@@ -16,6 +16,8 @@ const schema = z.object({
   image: z.string().max(1024).nullable().optional(),
   shellId: z.coerce.number().int().nullable().optional(),
   formFields: z.array(z.record(z.any())).optional(),
+  special: z.boolean().optional().default(false),
+  unlockThreshold: z.coerce.number().int().min(0).optional().default(0),
   orderColumn: z.coerce.number().int().default(0),
   status: z.coerce.number().int().min(0).max(1).default(1),
 });

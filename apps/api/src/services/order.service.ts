@@ -81,6 +81,16 @@ export async function ensureTelegramDiscountColumn(): Promise<void> {
   );
 }
 
+/** products.special / products.unlock_threshold কলাম না থাকলে বানায় (বুট-টাইমে, idempotent)। */
+export async function ensureSpecialProductColumns(): Promise<void> {
+  await prisma.$executeRawUnsafe(
+    'ALTER TABLE products ADD COLUMN IF NOT EXISTS special BOOLEAN NOT NULL DEFAULT false',
+  );
+  await prisma.$executeRawUnsafe(
+    'ALTER TABLE products ADD COLUMN IF NOT EXISTS unlock_threshold INTEGER NOT NULL DEFAULT 0',
+  );
+}
+
 /**
  * এই অর্ডারের *আগের* lifetime completed খরচ থেকে এই ইউজারের লেভেল ছাড় %।
  * order.create-এর আগে ডাকা হয় বলে চলতি অর্ডার নিজে গোনায় পড়ে না।
@@ -99,6 +109,29 @@ async function hasUserPrice(userId: number, variationId: number): Promise<boolea
   const rows = await prisma.$queryRaw<{ n: unknown }[]>`
     SELECT 1 AS n FROM user_prices WHERE user_id = ${userId} AND variation_id = ${variationId} LIMIT 1`;
   return rows.length > 0;
+}
+
+/**
+ * স্পেশাল (লকড) প্রোডাক্ট — এই ইউজারের lifetime completed খরচ unlockThreshold-এর
+ * নিচে হলে অর্ডার আটকাই। ফ্রন্টএন্ডের লক-কার্ড শুধু UX; আসল নিরাপত্তা এই গার্ডে
+ * (UI বাইপাস ঠেকাতে)। order.create-এর আগে ডাকা হয়।
+ */
+async function assertProductUnlocked(
+  userId: number,
+  product: { special?: boolean | null; unlockThreshold?: number | null },
+): Promise<void> {
+  if (!product.special) return;
+  const threshold = Number(product.unlockThreshold ?? 0);
+  if (threshold <= 0) return; // থ্রেশহোল্ড সেট নেই → লক ধরি না (safety)
+  const agg = await prisma.order.aggregate({
+    where: { userId, status: 'completed' },
+    _sum: { amount: true },
+  });
+  const spent = Number(agg._sum.amount ?? 0);
+  if (spent < threshold) {
+    const need = Math.max(0, Math.ceil(threshold - spent));
+    throw new HttpError(403, `এই স্পেশাল অফারটি এখনো লক করা — আনলক করতে আরও ৳${need} টপ-আপ করুন।`);
+  }
 }
 
 export interface AddOrderInput {
@@ -147,6 +180,9 @@ async function addNormalOrder(input: Required<AddOrderInput>): Promise<AddOrderR
     },
   });
   if (!variation) throw new HttpError(422, 'Sorry, this item is out of stock.');
+
+  // স্পেশাল (লকড) প্রোডাক্ট — খরচ থ্রেশহোল্ডে না পৌঁছালে অর্ডার আটকাই
+  await assertProductUnlocked(input.userId, variation.product);
 
   const isVoucher = variation.product.type === 'voucher';
   if (isVoucher) {
@@ -209,6 +245,9 @@ async function addComboOrder(input: Required<AddOrderInput>): Promise<AddOrderRe
     include: { product: true },
   });
   if (!combo) throw new HttpError(422, 'Sorry, this combo package is out of stock.');
+
+  // স্পেশাল (লকড) প্রোডাক্ট — combo প্যারেন্ট Product-এর লক থাকলে আটকাই
+  await assertProductUnlocked(input.userId, combo.product);
 
   let price = Number(combo.price);
   const buyRate = Number(combo.buyRate);

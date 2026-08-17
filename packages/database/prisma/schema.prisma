@@ -114,6 +114,10 @@ model Product {
   shellId     Int?        @map("shell_id")
   // Custom checkout input fields (manual topup): [{key,label,type,placeholder,options?}]
   formFields  Json?       @map("form_fields")
+  // স্পেশাল (লকড) প্রোডাক্ট — special হলে ইউজারের lifetime completed খরচ
+  // unlockThreshold ৳-এ না পৌঁছানো পর্যন্ত অর্ডার আটকানো থাকে (0 = লক নয়)।
+  special         Boolean  @default(false)
+  unlockThreshold Int      @default(0) @map("unlock_threshold")
   orderColumn Int         @default(0) @map("order_column")
   status      Int         @default(1)
   createdAt   DateTime    @default(now()) @map("created_at")

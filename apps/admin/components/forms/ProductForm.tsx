@@ -21,6 +21,8 @@ export interface ProductData {
   status?: number;
   image?: string | null;
   formFields?: any[] | null;
+  special?: boolean;
+  unlockThreshold?: number | null;
 }
 
 const FORM_FIELDS_EXAMPLE = `[
@@ -77,6 +79,8 @@ export function ProductForm({ initial }: { initial?: ProductData }) {
       formFields,
       orderColumn: form.orderColumn ?? 0,
       status: form.status ?? 1,
+      special: form.special ?? false,
+      unlockThreshold: form.unlockThreshold ?? 0,
     };
     const res = form.id
       ? await apiPut(`/api/admin/products/${form.id}`, body)
@@ -198,6 +202,32 @@ export function ProductForm({ initial }: { initial?: ProductData }) {
           <option value={1}>Active</option>
           <option value={0}>Inactive</option>
         </select>
+      </div>
+
+      <div className="rounded-lg border border-slate-200 p-4">
+        <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
+          <input
+            type="checkbox"
+            checked={!!form.special}
+            onChange={(e) => set('special', e.target.checked)}
+          />
+          Special (locked) product — শুধু নির্দিষ্ট খরচের ইউজারদের জন্য আনলক হবে
+        </label>
+        {form.special && (
+          <div className="mt-3">
+            <label className="label">Unlock threshold (৳)</label>
+            <input
+              type="number"
+              min={0}
+              className="input w-48"
+              value={form.unlockThreshold ?? 0}
+              onChange={(e) => set('unlockThreshold', Number(e.target.value))}
+            />
+            <p className="mt-1 text-xs text-slate-400">
+              ইউজারের lifetime completed খরচ এই টাকায় পৌঁছালে প্রোডাক্টটি স্থায়ীভাবে আনলক হবে।
+            </p>
+          </div>
+        )}
       </div>
 
       <div className="flex justify-end gap-2">

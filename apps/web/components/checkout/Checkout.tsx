@@ -11,6 +11,7 @@ import { useSettings } from '@/lib/settings';
 import { apiGet, apiPost } from '@/lib/api';
 import { imageUrl } from '@/lib/config';
 import { money } from '@/lib/format';
+import { SpecialLockCard } from '@/components/checkout/SpecialLockCard';
 
 interface Variation {
   id: number;
@@ -36,6 +37,8 @@ export interface CheckoutProduct {
   formFields?: FormField[] | null;
   variations: Variation[];
   comboPackages: Combo[];
+  special?: boolean;
+  unlockThreshold?: number | null;
 }
 
 interface FormField {
@@ -62,6 +65,10 @@ export function Checkout({ product }: { product: CheckoutProduct }) {
   const isVoucher = product.type === 'voucher';
   const needsPlayerId = !isVoucher && !hasCustomFields;
 
+  // স্পেশাল (লকড) প্রোডাক্ট — খরচ থ্রেশহোল্ডে না পৌঁছালে লক-কার্ড দেখাই
+  const isSpecial = !!product.special;
+  const threshold = Number(product.unlockThreshold ?? 0);
+
   const [selection, setSelection] = useState<Selection>(null);
   const [playerId, setPlayerId] = useState('');
   const [custom, setCustom] = useState<Record<string, string>>({});
@@ -71,6 +78,8 @@ export function Checkout({ product }: { product: CheckoutProduct }) {
   const [payment, setPayment] = useState<'wallet' | 'uddoktapay'>('uddoktapay');
   const [submitting, setSubmitting] = useState(false);
   const [saved, setSaved] = useState<{ player_id: string; nickname: string | null }[]>([]);
+  const [spend, setSpend] = useState<number | null>(null);
+  const [spendLoading, setSpendLoading] = useState(false);
 
   // Auto-select Wallet once the user loads with a positive balance (user is
   // fetched async, so the initial state can't rely on it). Manual changes stick.
@@ -99,6 +108,17 @@ export function Checkout({ product }: { product: CheckoutProduct }) {
     loadSaved();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, needsPlayerId, product.id]);
+
+  // স্পেশাল প্রোডাক্ট হলে লগইন-করা ইউজারের lifetime খরচ আনি (প্রোফাইলের totalSpent-এর মতোই)
+  useEffect(() => {
+    if (!isSpecial || !user) return;
+    setSpendLoading(true);
+    apiGet<{ totalSpent: number }>('/api/user/profile')
+      .then((r) => setSpend(Number(r.data?.totalSpent ?? 0)))
+      .catch(() => setSpend(0))
+      .finally(() => setSpendLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isSpecial, user]);
 
   async function removeSaved(pid: string) {
     setSaved((s) => s.filter((x) => x.player_id !== pid));
@@ -196,6 +216,11 @@ export function Checkout({ product }: { product: CheckoutProduct }) {
 
   const enoughBalance = Number(user?.balance ?? 0) >= selectedPrice;
 
+  // লক অবস্থা: থ্রেশহোল্ড থাকলে + (লগআউট বা খরচ < থ্রেশহোল্ড) → buy-grid-এর বদলে লক-কার্ড
+  const gated = isSpecial && threshold > 0;
+  const unlocked = gated && !!user && spend !== null && spend >= threshold;
+  const showLock = gated && !unlocked;
+
   return (
     <div className="container-page py-5">
       {/* ── Product header ── */}
@@ -214,6 +239,14 @@ export function Checkout({ product }: { product: CheckoutProduct }) {
         </div>
       </div>
 
+      {showLock ? (
+        <SpecialLockCard
+          threshold={threshold}
+          spend={spend}
+          loading={spendLoading}
+          loggedIn={!!user}
+        />
+      ) : (
       <div className="grid gap-5 lg:grid-cols-[1.9fr_1fr]">
         {/* ── LEFT: Select Recharge ── */}
         <div>
@@ -449,6 +482,7 @@ export function Checkout({ product }: { product: CheckoutProduct }) {
           </Section>
         </div>
       </div>
+      )}
 
       {/* ── Rules & Conditions (full width) ── */}
       <div id="rules" className="mt-5">
