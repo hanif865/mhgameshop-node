@@ -1,9 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Loader2 } from 'lucide-react';
+import { Loader2, PackageOpen } from 'lucide-react';
 import { apiGet } from '@/lib/api';
 import { Badge } from '@/components/ui/Badge';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { Pagination } from '@/components/ui/Pagination';
 import { money, formatDate } from '@/lib/format';
 import { useOrderSocket } from '@/lib/socket';
@@ -59,7 +60,11 @@ export default function OrdersPage() {
           <Loader2 className="animate-spin" />
         </div>
       ) : orders.length === 0 ? (
-        <p className="py-16 text-center text-slate-400">You have no orders yet.</p>
+        <EmptyState
+          icon={PackageOpen}
+          title="You have no orders yet."
+          subtitle="Your placed orders will show up here."
+        />
       ) : (
         <div className="grid gap-3 md:grid-cols-2">
           {orders.map((o) => {

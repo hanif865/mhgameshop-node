@@ -63,7 +63,7 @@ export default function AddFundsPage() {
             <button
               key={v}
               onClick={() => setAmount(String(v))}
-              className="rounded-lg border border-slate-200 py-2 text-sm font-semibold text-slate-600 hover:border-primary hover:text-primary-dark"
+              className="rounded-xl border border-slate-200 py-2 text-sm font-semibold text-slate-600 hover:border-primary hover:text-primary-dark"
             >
               ৳{v}
             </button>

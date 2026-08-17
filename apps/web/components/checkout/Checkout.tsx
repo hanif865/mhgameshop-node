@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import clsx from 'clsx';
-import { BadgeCheck, Loader2, Wallet, Zap, LogIn, Info, HelpCircle } from 'lucide-react';
+import { BadgeCheck, Loader2, Wallet, Zap, LogIn, Info, HelpCircle, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
 import { useToast } from '@/components/ui/Toast';
 import { useSettings } from '@/lib/settings';
@@ -499,29 +499,46 @@ export function Checkout({ product }: { product: CheckoutProduct }) {
       {/* ── Rules & Conditions (full width) ── */}
       <div id="rules" className="mt-5">
         <Section title="Rules & Conditions" tone="plain">
-          {product.description ? (
-            <div
-              className="prose prose-sm max-w-none text-sm leading-relaxed text-slate-600 [&_li]:my-1"
-              dangerouslySetInnerHTML={{ __html: product.description }}
-            />
-          ) : (
-            <ul className="space-y-2 text-sm leading-relaxed text-slate-600">
-              <li>শুধুমাত্র Bangladesh সার্ভারে ID Code দিয়ে টপ আপ হবে।</li>
-              <li>Player ID Code ভুল দিয়ে Diamond না পেলে কর্তৃপক্ষ দায়ী নয়।</li>
-              <li>
-                অর্ডার কমপ্লিট হওয়ার পরেও আইডিতে ডায়মন্ড না গেলে চেক করার জন্য আইডি পাসওয়ার্ড দিতে
-                হবে।
+          <ul className="space-y-2.5 text-sm leading-relaxed text-slate-600">
+            {rulesFor(product.description).map((rule, i) => (
+              <li key={i} className="flex gap-2.5">
+                <CheckCircle2 size={17} className="mt-0.5 shrink-0 text-primary" />
+                <span>{rule}</span>
               </li>
-              <li>
-                অর্ডার Cancel হলে কি কারণে তা Cancel হয়েছে তা অর্ডার হিস্টোরিতে দেওয়া থাকে —
-                অনুগ্রহপূর্বক দেখে পুনরায় সঠিক তথ্য দিয়ে অর্ডার করবেন।
-              </li>
-            </ul>
-          )}
+            ))}
+          </ul>
         </Section>
       </div>
     </div>
   );
+}
+
+/* ── Rules & Conditions parsing ──
+ * অ্যাডমিন প্লেইন <textarea>-তে (◉ মার্কার বা প্রতি লাইনে একটা করে) rules লেখে।
+ * সেটাকে নিরাপদে আলাদা আইটেমে ভাঙি — পুরনো ডেটায় HTML ট্যাগ থাকলে টেক্সট বের করে
+ * নিই (dangerouslySetInnerHTML নয়, তাই XSS ঝুঁকি নেই)। */
+function parseRules(desc: string): string[] {
+  const text = desc
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/(p|li|div)>/gi, '\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&');
+  const parts = text.includes('◉') ? text.split('◉') : text.split(/\r?\n/);
+  return parts.map((s) => s.replace(/^[•\-*◉\s]+/, '').trim()).filter(Boolean);
+}
+
+// প্রোডাক্টে description না থাকলে (বা পার্স করে খালি এলে) এই ডিফল্ট rules দেখাই।
+const DEFAULT_RULES = [
+  'শুধুমাত্র Bangladesh সার্ভারে ID Code দিয়ে টপ আপ হবে।',
+  'Player ID Code ভুল দিয়ে Diamond না পেলে কর্তৃপক্ষ দায়ী নয়।',
+  'অর্ডার কমপ্লিট হওয়ার পরেও আইডিতে ডায়মন্ড না গেলে চেক করার জন্য আইডি পাসওয়ার্ড দিতে হবে।',
+  'অর্ডার Cancel হলে কি কারণে তা Cancel হয়েছে তা অর্ডার হিস্টোরিতে দেওয়া থাকে — অনুগ্রহপূর্বক দেখে পুনরায় সঠিক তথ্য দিয়ে অর্ডার করবেন।',
+];
+
+function rulesFor(desc?: string | null): string[] {
+  const parsed = desc ? parseRules(desc) : [];
+  return parsed.length ? parsed : DEFAULT_RULES;
 }
 
 /* ── Section card with numbered header (green badge) ── */

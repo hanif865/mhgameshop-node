@@ -62,7 +62,7 @@ export default function CreatorPage() {
 
   const badge = (s: string) =>
     s === 'approved'
-      ? 'bg-green-100 text-green-700'
+      ? 'bg-primary/10 text-primary-dark'
       : s === 'rejected'
         ? 'bg-red-100 text-red-700'
         : 'bg-amber-100 text-amber-700';
@@ -86,7 +86,7 @@ export default function CreatorPage() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-2xl font-bold text-slate-800">Creator Program</h1>
+        <h1 className="text-xl font-extrabold text-slate-800">Creator Program</h1>
         <p className="text-sm text-slate-500">
           Make a review video about us, submit the link, and earn a bonus once approved.
         </p>
@@ -94,7 +94,7 @@ export default function CreatorPage() {
 
       {d.earned > 0 && (
         <div className="card flex items-center gap-3 p-4">
-          <span className="grid h-11 w-11 place-items-center rounded-xl bg-amber-100 text-amber-700"><Wallet size={20} /></span>
+          <span className="grid h-11 w-11 place-items-center rounded-xl bg-gold/10 text-gold"><Wallet size={20} /></span>
           <div>
             <p className="text-sm text-slate-400">Total earned</p>
             <p className="text-xl font-extrabold text-slate-800">{money(d.earned)}</p>
@@ -145,7 +145,7 @@ export default function CreatorPage() {
                   <span className={`rounded px-2 py-0.5 text-xs font-medium ${badge(i.status)}`}>{i.status}</span>
                   <span className="rounded bg-slate-100 px-2 py-0.5 text-xs capitalize text-slate-600">{i.platform}</span>
                   {i.status === 'approved' && (
-                    <span className="text-sm font-semibold text-green-600">+{money(i.bonus)}</span>
+                    <span className="text-sm font-semibold text-primary-dark">+{money(i.bonus)}</span>
                   )}
                 </div>
                 <a

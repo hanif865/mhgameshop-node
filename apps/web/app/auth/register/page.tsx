@@ -3,14 +3,16 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Gamepad2 } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
 import { useToast } from '@/components/ui/Toast';
-import { API_URL } from '@/lib/config';
+import { useSettings } from '@/lib/settings';
+import { API_URL, imageUrl } from '@/lib/config';
 import { apiGet } from '@/lib/api';
 
 export default function RegisterPage() {
   const { register } = useAuth();
+  const { get } = useSettings();
   const toast = useToast();
   const router = useRouter();
   const [name, setName] = useState('');
@@ -51,8 +53,24 @@ export default function RegisterPage() {
   return (
     <div className="container-page flex min-h-[70vh] items-center justify-center py-8">
       <div className="card w-full max-w-md p-7">
-        <h1 className="text-2xl font-extrabold text-slate-800">Create account</h1>
-        <p className="mt-1 text-sm text-slate-500">Join MH Game Shop in seconds.</p>
+        <div className="mb-6 flex flex-col items-center text-center">
+          {get('site_logo') ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={imageUrl(get('site_logo'))}
+              alt={get('site_name', 'MH Game Shop')}
+              className="h-12 w-auto object-contain"
+            />
+          ) : (
+            <span className="grid h-14 w-14 place-items-center rounded-2xl bg-primary text-white shadow-card">
+              <Gamepad2 size={28} />
+            </span>
+          )}
+          <h1 className="mt-3 text-2xl font-extrabold text-slate-800">
+            Create <span className="text-primary-dark">account</span>
+          </h1>
+          <p className="mt-1 text-sm text-slate-500">Join MH Game Shop in seconds.</p>
+        </div>
 
         <form onSubmit={onSubmit} className="mt-6 space-y-4">
           <div>
@@ -80,7 +98,7 @@ export default function RegisterPage() {
               onChange={(e) => setPassword(e.target.value)}
             />
           </div>
-          <button type="submit" disabled={loading} className="btn-primary w-full py-3">
+          <button type="submit" disabled={loading} className="btn-primary w-full py-2.5">
             {loading ? <Loader2 className="animate-spin" /> : 'Sign up'}
           </button>
         </form>
@@ -89,7 +107,7 @@ export default function RegisterPage() {
           <div className="h-px flex-1 bg-slate-200" /> OR <div className="h-px flex-1 bg-slate-200" />
         </div>
 
-        <a href={`${API_URL}/api/auth/google`} className="btn-outline w-full py-3">
+        <a href={`${API_URL}/api/auth/google`} className="btn-outline w-full py-2.5">
           <GoogleIcon /> Continue with Google
         </a>
 

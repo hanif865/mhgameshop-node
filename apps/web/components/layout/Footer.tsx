@@ -87,8 +87,19 @@ export function Footer() {
         </div>
       </div>
 
-      <div className="container-page mt-8 border-t border-white/15 pt-6 text-center text-xs text-white/70">
-        © {new Date().getFullYear()} {get('site_name', 'MH Game Shop')}. All rights reserved.
+      <div className="container-page mt-8 flex flex-col items-center justify-between gap-2 border-t border-white/15 pt-6 text-xs text-white/70 sm:flex-row">
+        <p>© {new Date().getFullYear()} {get('site_name', 'MH Game Shop')}. All rights reserved.</p>
+        <p>
+          Developed by{' '}
+          <a
+            href="https://netliverse.com/"
+            target="_blank"
+            rel="noreferrer"
+            className="font-semibold text-white transition hover:text-gold"
+          >
+            Netliverse
+          </a>
+        </p>
       </div>
     </footer>
   );

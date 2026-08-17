@@ -143,7 +143,7 @@ export default function SpinPage() {
       )}
 
       <div>
-        <h1 className="flex items-center gap-2 text-2xl font-bold text-slate-800">
+        <h1 className="flex items-center gap-2 text-xl font-extrabold text-slate-800">
           <Sparkles className="text-primary" /> Spin &amp; Win
         </h1>
         <p className="text-sm text-slate-500">স্পিন করুন, ওয়ালেটে বোনাস নিন — প্রতি অ্যাকাউন্টে একবার।</p>
@@ -160,7 +160,7 @@ export default function SpinPage() {
               height: 0,
               borderLeft: '14px solid transparent',
               borderRight: '14px solid transparent',
-              borderTop: '22px solid #f59e0b',
+              borderTop: '22px solid #ca8a04',
               filter: 'drop-shadow(0 2px 2px rgba(0,0,0,.25))',
             }}
           />
@@ -173,7 +173,7 @@ export default function SpinPage() {
               transform: `rotate(${rotation}deg)`,
               transition: spinning ? 'transform 4.5s cubic-bezier(0.15,0.72,0.12,1)' : 'none',
               borderRadius: '50%',
-              boxShadow: '0 8px 30px rgba(79,70,229,.25)',
+              boxShadow: '0 8px 30px rgba(21,128,61,.22)',
             }}
           >
             {wheel.map((w, i) => (

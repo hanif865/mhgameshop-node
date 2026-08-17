@@ -7,8 +7,8 @@ import { Crown, Gem, Award, Medal, type LucideIcon } from 'lucide-react';
 type TierMeta = { label: string; Icon: LucideIcon; className: string };
 
 const TIERS: Record<string, TierMeta> = {
-  premium: { label: 'Premium', Icon: Crown, className: 'bg-indigo-100 text-indigo-700 ring-1 ring-indigo-200' },
-  platinum: { label: 'Platinum', Icon: Gem, className: 'bg-cyan-100 text-cyan-700 ring-1 ring-cyan-200' },
+  premium: { label: 'Premium', Icon: Crown, className: 'bg-primary/10 text-primary-dark ring-1 ring-primary/20' },
+  platinum: { label: 'Platinum', Icon: Gem, className: 'bg-emerald-100 text-emerald-700 ring-1 ring-emerald-200' },
   gold: { label: 'Gold', Icon: Award, className: 'bg-gold/10 text-gold ring-1 ring-gold/30' },
   silver: { label: 'Silver', Icon: Medal, className: 'bg-slate-100 text-slate-600 ring-1 ring-slate-200' },
   bronze: { label: 'Bronze', Icon: Medal, className: 'bg-amber-100 text-amber-800 ring-1 ring-amber-200' },

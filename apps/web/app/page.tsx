@@ -75,7 +75,7 @@ export default async function HomePage() {
         <TopRankedUsers users={topUsers} />
 
         {/* Telegram bot promo */}
-        <section className="overflow-hidden rounded-2xl bg-gradient-to-r from-sky-500 to-indigo-600 p-6 text-white shadow-lg sm:p-8">
+        <section className="overflow-hidden rounded-2xl bg-gradient-to-r from-primary-dark via-primary to-emerald-700 p-6 text-white shadow-lg sm:p-8">
           <div className="flex flex-col items-center gap-5 text-center sm:flex-row sm:justify-between sm:text-left">
             <div className="flex items-center gap-4">
               <span className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-white/15">
@@ -92,7 +92,7 @@ export default async function HomePage() {
               href="https://t.me/mh_game_shop_bot"
               target="_blank"
               rel="noopener noreferrer"
-              className="shrink-0 rounded-xl bg-white px-6 py-3 font-bold text-indigo-600 shadow-md transition hover:bg-slate-100"
+              className="shrink-0 rounded-xl bg-gold px-6 py-3 font-bold text-white shadow-md transition hover:bg-gold-light"
             >
               বট চালু করুন →
             </a>
@@ -113,7 +113,7 @@ export default async function HomePage() {
           </a>
           <Link
             href="/#products"
-            className="flex items-center gap-4 rounded-2xl bg-sky-500 p-5 text-white transition hover:bg-sky-600"
+            className="flex items-center gap-4 rounded-2xl bg-primary p-5 text-white transition hover:bg-primary-dark"
           >
             <Send size={28} />
             <div>

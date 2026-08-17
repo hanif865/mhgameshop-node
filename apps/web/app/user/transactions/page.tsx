@@ -1,9 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Loader2, ArrowDownLeft, ArrowUpRight } from 'lucide-react';
+import { Loader2, ArrowDownLeft, ArrowUpRight, Receipt } from 'lucide-react';
 import { apiGet } from '@/lib/api';
 import { Pagination } from '@/components/ui/Pagination';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { money, formatDate } from '@/lib/format';
 
 interface Txn {
@@ -42,7 +43,11 @@ export default function TransactionsPage() {
           <Loader2 className="animate-spin" />
         </div>
       ) : items.length === 0 ? (
-        <p className="py-16 text-center text-slate-400">No transactions yet.</p>
+        <EmptyState
+          icon={Receipt}
+          title="No transactions yet."
+          subtitle="Your wallet activity will show up here."
+        />
       ) : (
         <div className="card divide-y divide-slate-100 overflow-hidden">
           {items.map((t) => {

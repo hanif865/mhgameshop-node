@@ -1,9 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Loader2, Copy, Check, Gift } from 'lucide-react';
+import { Loader2, Copy, Check, Gift, Ticket } from 'lucide-react';
 import { apiGet } from '@/lib/api';
 import { Pagination } from '@/components/ui/Pagination';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { useToast } from '@/components/ui/Toast';
 import { useSettings } from '@/lib/settings';
 import { shortDate } from '@/lib/format';
@@ -62,7 +63,11 @@ export default function CodesPage() {
           <Loader2 className="animate-spin" />
         </div>
       ) : orders.length === 0 ? (
-        <p className="py-16 text-center text-slate-400">No voucher codes yet.</p>
+        <EmptyState
+          icon={Ticket}
+          title="No voucher codes yet."
+          subtitle="Codes from your voucher purchases will appear here."
+        />
       ) : (
         <div className="grid gap-3 md:grid-cols-2">
           {orders.map((o) => (
@@ -73,8 +78,8 @@ export default function CodesPage() {
                 </p>
                 <span className="text-xs text-slate-400">{shortDate(o.createdAt)}</span>
               </div>
-              <div className="mt-3 rounded-xl bg-violet-50 p-3">
-                <code className="block break-all text-sm font-semibold text-violet-800">
+              <div className="mt-3 rounded-xl bg-primary/5 p-3">
+                <code className="block break-all text-sm font-semibold text-primary-dark">
                   {o.voucherCode}
                 </code>
               </div>

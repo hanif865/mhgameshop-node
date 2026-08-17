@@ -80,7 +80,7 @@ export default function ReferralPage() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-2xl font-bold text-slate-800">Refer &amp; Earn</h1>
+        <h1 className="text-xl font-extrabold text-slate-800">Refer &amp; Earn</h1>
         <p className="text-sm text-slate-500">
           Share your link — when a friend places their first order, you earn a bonus.
         </p>
@@ -96,9 +96,9 @@ export default function ReferralPage() {
             {d.minOrder > 0 && ` of ${money(d.minOrder)} or more`}
           </p>
         </div>
-        <div className="rounded-xl bg-accent/5 p-4">
+        <div className="rounded-xl bg-gold/10 p-4">
           <p className="text-sm text-slate-500">Your friend gets</p>
-          <p className="text-2xl font-extrabold text-accent-dark">{money(d.refereeBonus)}</p>
+          <p className="text-2xl font-extrabold text-gold">{money(d.refereeBonus)}</p>
           <p className="text-xs text-slate-400">instantly on sign-up</p>
         </div>
       </div>
@@ -128,21 +128,21 @@ export default function ReferralPage() {
       {/* পরিসংখ্যান */}
       <div className="grid gap-4 sm:grid-cols-3">
         <div className="card flex items-center gap-3 p-4">
-          <span className="grid h-11 w-11 place-items-center rounded-xl bg-blue-100 text-blue-700"><Users size={20} /></span>
+          <span className="grid h-11 w-11 place-items-center rounded-xl bg-primary/10 text-primary-dark"><Users size={20} /></span>
           <div>
             <p className="text-sm text-slate-400">Invited</p>
             <p className="text-xl font-extrabold text-slate-800">{d.invited}</p>
           </div>
         </div>
         <div className="card flex items-center gap-3 p-4">
-          <span className="grid h-11 w-11 place-items-center rounded-xl bg-green-100 text-green-700"><Check size={20} /></span>
+          <span className="grid h-11 w-11 place-items-center rounded-xl bg-emerald-100 text-emerald-700"><Check size={20} /></span>
           <div>
             <p className="text-sm text-slate-400">Rewarded</p>
             <p className="text-xl font-extrabold text-slate-800">{d.rewarded}</p>
           </div>
         </div>
         <div className="card flex items-center gap-3 p-4">
-          <span className="grid h-11 w-11 place-items-center rounded-xl bg-amber-100 text-amber-700"><Wallet size={20} /></span>
+          <span className="grid h-11 w-11 place-items-center rounded-xl bg-gold/10 text-gold"><Wallet size={20} /></span>
           <div>
             <p className="text-sm text-slate-400">Earned</p>
             <p className="text-xl font-extrabold text-slate-800">{money(d.earned)}</p>
