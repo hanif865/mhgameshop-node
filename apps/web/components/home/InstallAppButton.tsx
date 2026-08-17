@@ -13,7 +13,8 @@ export function InstallAppButton() {
   const { get } = useSettings();
   const toast = useToast();
 
-  const appName = `${get('site_name', 'MH Game Shop')} App`;
+  // site_name সেটিংয়ে ট্রেইলিং স্পেস থাকতে পারে → trim করে ডাবল-স্পেস এড়াই।
+  const appName = `${get('site_name', 'MH Game Shop').trim()} App`;
 
   async function handleClick() {
     if (state === 'ready') {
