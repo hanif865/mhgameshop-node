@@ -54,6 +54,21 @@ export default function OrderDetail({ params }: { params: { id: string } }) {
 
   const pkg = order.variation?.title ?? order.comboPackage?.title ?? order.product?.title;
 
+  // account_info-এর সব ফিল্ড (player_id + কাস্টম ফিল্ড) দেখাই। label আসে
+  // প্রোডাক্টের formFields থেকে; না থাকলে key-কে সুন্দর করে দেখাই।
+  const accountInfo: Record<string, any> = order.accountInfo ?? {};
+  const fieldLabels: Record<string, string> = { player_id: 'Player ID' };
+  if (Array.isArray(order.product?.formFields)) {
+    for (const f of order.product.formFields as any[]) {
+      if (f?.key) fieldLabels[f.key] = f.label || f.key;
+    }
+  }
+  const accountEntries = Object.entries(accountInfo).filter(
+    ([, v]) => v !== null && v !== undefined && String(v).trim() !== '',
+  );
+  const prettify = (k: string) =>
+    fieldLabels[k] ?? k.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+
   return (
     <div>
       <div className="mb-5 flex items-center gap-3">
@@ -69,7 +84,13 @@ export default function OrderDetail({ params }: { params: { id: string } }) {
               <Item label="Customer" value={order.user?.name} />
               <Item label="Email" value={order.user?.email} />
               <Item label="Package" value={pkg} />
-              <Item label="Player ID" value={order.accountInfo?.player_id ?? '—'} />
+              {accountEntries.length > 0 ? (
+                accountEntries.map(([k, v]) => (
+                  <Item key={k} label={prettify(k)} value={String(v)} />
+                ))
+              ) : (
+                <Item label="Account Info" value="—" />
+              )}
               <Item label="Amount" value={money(order.amount)} />
               <Item label="Profit" value={money(order.profit)} />
               <Item label="Payment" value={order.paymentMethod ?? '—'} />

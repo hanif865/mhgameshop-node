@@ -14,7 +14,7 @@ interface Order {
   status: string;
   amount: string;
   createdAt: string;
-  accountInfo: { player_id?: string } | null;
+  accountInfo: Record<string, string> | null;
   deliveryMessage: string | null;
   product: { title: string; type: string } | null;
   variation: { title: string } | null;
@@ -75,9 +75,9 @@ export default function OrdersPage() {
                 </div>
                 <dl className="mt-3 space-y-1 text-sm">
                   <Row label="Date" value={formatDate(o.createdAt)} />
-                  {o.accountInfo?.player_id && (
-                    <Row label="Player ID" value={o.accountInfo.player_id} />
-                  )}
+                  {accountEntries(o.accountInfo).map(([k, v]) => (
+                    <Row key={k} label={prettifyKey(k)} value={v} />
+                  ))}
                   <Row label="Price" value={money(o.amount)} />
                   {o.deliveryMessage && <Row label="Message" value={o.deliveryMessage} />}
                 </dl>
@@ -99,4 +99,17 @@ function Row({ label, value }: { label: string; value: string }) {
       <dd className="text-right font-medium text-slate-700">{value}</dd>
     </div>
   );
+}
+
+// account_info-এর খালি নয় এমন সব ফিল্ড দেখাই (player_id + কাস্টম ফিল্ড)।
+function accountEntries(ai: Record<string, string> | null): [string, string][] {
+  if (!ai) return [];
+  return Object.entries(ai).filter(
+    ([, v]) => v !== null && v !== undefined && String(v).trim() !== '',
+  ) as [string, string][];
+}
+
+function prettifyKey(k: string): string {
+  if (k === 'player_id') return 'Player ID';
+  return k.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 }

@@ -13,7 +13,7 @@ interface Order {
   status: string;
   amount: string;
   createdAt: string;
-  accountInfo: { player_id?: string } | null;
+  accountInfo: Record<string, string> | null;
   user?: { name: string };
   product?: { title: string };
   variation?: { title: string };
@@ -53,7 +53,17 @@ export default function OrdersPage() {
       label: 'Variation / Combo',
       render: (r) => r.variation?.title ?? r.comboPackage?.title ?? '—',
     },
-    { key: 'player', label: 'Player ID', render: (r) => r.accountInfo?.player_id ?? '—' },
+    {
+      key: 'account',
+      label: 'Account Info',
+      render: (r) => {
+        const ai = r.accountInfo;
+        if (!ai) return '—';
+        if (ai.player_id) return ai.player_id;
+        const vals = Object.values(ai).filter(Boolean);
+        return vals.length ? vals.join(', ') : '—';
+      },
+    },
     { key: 'amount', label: 'Amount', render: (r) => money(r.amount) },
     { key: 'status', label: 'Status', render: (r) => <StatusBadge status={r.status} /> },
     { key: 'date', label: 'Date', render: (r) => formatDate(r.createdAt) },

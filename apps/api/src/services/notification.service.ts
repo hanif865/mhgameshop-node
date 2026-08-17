@@ -35,13 +35,29 @@ export async function sendTelegram(message: string): Promise<boolean> {
 /** New order notification. Package = variation.title ?? comboPackage.title. */
 export async function newOrder(order: any): Promise<void> {
   const pkg = order.variation?.title ?? order.comboPackage?.title ?? 'N/A';
-  const playerId = order.accountInfo?.player_id ?? '-';
+
+  // account_info-এর সব ফিল্ড দেখাই (player_id + কাস্টম ফিল্ড)। label আসে
+  // প্রোডাক্টের formFields থেকে; না থাকলে key দেখাই।
+  const accountInfo: Record<string, any> = order.accountInfo ?? {};
+  const labels: Record<string, string> = { player_id: 'Player ID' };
+  if (Array.isArray(order.product?.formFields)) {
+    for (const f of order.product.formFields as any[]) {
+      if (f?.key) labels[f.key] = f.label || f.key;
+    }
+  }
+  const entries = Object.entries(accountInfo).filter(
+    ([, v]) => v !== null && v !== undefined && String(v).trim() !== '',
+  );
+  const accountLines = entries.length
+    ? entries.map(([k, v]) => `${labels[k] ?? k}: ${v}`).join('\n')
+    : 'Player ID: -';
+
   const message =
     `🛒 <b>New Order</b>\n\n` +
     `Order ID: <code>${order.id}</code>\n` +
     `User: ${order.user?.name ?? '-'}\n` +
     `Package: ${pkg}\n` +
-    `Player ID: ${playerId}\n` +
+    `${accountLines}\n` +
     `Amount: ৳${order.amount}\n` +
     `Status: ${order.status}`;
   await sendTelegram(message);
