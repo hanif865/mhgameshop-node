@@ -11,6 +11,7 @@ import { useSettings } from '@/lib/settings';
 import { apiGet, apiPost } from '@/lib/api';
 import { imageUrl } from '@/lib/config';
 import { money } from '@/lib/format';
+import { readUidHistory, rememberUid } from '@/lib/uidHistory';
 import { SpecialLockCard } from '@/components/checkout/SpecialLockCard';
 
 interface Variation {
@@ -78,6 +79,7 @@ export function Checkout({ product }: { product: CheckoutProduct }) {
   const [payment, setPayment] = useState<'wallet' | 'uddoktapay'>('uddoktapay');
   const [submitting, setSubmitting] = useState(false);
   const [saved, setSaved] = useState<{ player_id: string; nickname: string | null }[]>([]);
+  const [uidHistory, setUidHistory] = useState<string[]>([]);
   const [spend, setSpend] = useState<number | null>(null);
   const [spendLoading, setSpendLoading] = useState(false);
 
@@ -95,6 +97,11 @@ export function Checkout({ product }: { product: CheckoutProduct }) {
   useEffect(() => {
     setQuantity(1);
   }, [selection?.id, selection?.kind]);
+
+  // অন-ডিভাইস সেভ করা UID লোড (গেস্ট/লগইন—উভয়েই datalist সাজেশন পাবে)।
+  useEffect(() => {
+    setUidHistory(readUidHistory());
+  }, []);
 
   // সেভ করা Player ID লোড (লগইন থাকলে, player-id মোডে)
   async function loadSaved() {
@@ -149,6 +156,8 @@ export function Checkout({ product }: { product: CheckoutProduct }) {
       if (res.success && res.data) {
         setNickname(res.data.nickname);
         toast.success(`Player found: ${res.data.nickname}`);
+        // যাচাই-হওয়া UID অন-ডিভাইসে মনে রাখি (পরেরবার সাজেশনে আসবে)।
+        setUidHistory(rememberUid(playerId));
       } else {
         toast.error(res.message || 'Could not verify this Player ID.');
       }
@@ -199,6 +208,8 @@ export function Checkout({ product }: { product: CheckoutProduct }) {
           player_id: playerId.trim(),
           nickname,
         }).catch(() => {});
+        // অন-ডিভাইসেও রাখি — গেস্টসহ পরেরবার datalist সাজেশনে আসবে।
+        setUidHistory(rememberUid(playerId));
       }
       const redirect = (res as any).redirect_url as string | undefined;
       if (redirect) {
@@ -390,6 +401,8 @@ export function Checkout({ product }: { product: CheckoutProduct }) {
               </label>
               <input
                 className="input"
+                name="player_id"
+                list="uid-history"
                 placeholder="এখানে প্লেয়ার আইডি কোড দিন"
                 value={playerId}
                 onChange={(e) => {
@@ -397,6 +410,13 @@ export function Checkout({ product }: { product: CheckoutProduct }) {
                   setNickname(null);
                 }}
               />
+              {uidHistory.length > 0 && (
+                <datalist id="uid-history">
+                  {uidHistory.map((id) => (
+                    <option key={id} value={id} />
+                  ))}
+                </datalist>
+              )}
               <button
                 onClick={checkUid}
                 disabled={checking}
