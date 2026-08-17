@@ -239,19 +239,24 @@ export function Checkout({ product }: { product: CheckoutProduct }) {
         </div>
       </div>
 
-      {showLock ? (
+      {showLock && (
         <SpecialLockCard
           threshold={threshold}
           spend={spend}
           loading={spendLoading}
           loggedIn={!!user}
         />
-      ) : (
-      <div className="grid gap-5 lg:grid-cols-[1.9fr_1fr]">
+      )}
+
+      <div className={`grid gap-5 ${showLock ? '' : 'lg:grid-cols-[1.9fr_1fr]'}`}>
         {/* ── LEFT: Select Recharge ── */}
         <div>
           <Section num={1} title="Select Recharge">
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            <div
+              className={`grid grid-cols-2 gap-3 sm:grid-cols-3 ${
+                showLock ? 'pointer-events-none opacity-70' : ''
+              }`}
+            >
               {product.variations.map((v) => (
                 <PackageTile
                   key={`v-${v.id}`}
@@ -278,6 +283,12 @@ export function Checkout({ product }: { product: CheckoutProduct }) {
               ))}
             </div>
 
+            {showLock && (
+              <p className="mt-3 flex items-center gap-1.5 rounded-lg bg-primary/5 px-3 py-2 text-sm font-medium text-primary-dark">
+                <Info size={15} /> এই প্যাকেজগুলো এখন লক — টার্গেট পূরণ হলে অর্ডার করতে পারবেন।
+              </p>
+            )}
+
             <a
               href="#rules"
               className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-gold hover:underline"
@@ -287,7 +298,8 @@ export function Checkout({ product }: { product: CheckoutProduct }) {
           </Section>
         </div>
 
-        {/* ── RIGHT: Account Info + Payment ── */}
+        {/* ── RIGHT: Account Info + Payment (লক থাকলে দেখাই না) ── */}
+        {!showLock && (
         <div className="space-y-5">
           {/* Custom login-based fields (manual topup) */}
           {hasCustomFields && (
@@ -481,8 +493,8 @@ export function Checkout({ product }: { product: CheckoutProduct }) {
             )}
           </Section>
         </div>
+        )}
       </div>
-      )}
 
       {/* ── Rules & Conditions (full width) ── */}
       <div id="rules" className="mt-5">
