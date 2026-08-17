@@ -1,11 +1,12 @@
 import Link from 'next/link';
-import { Play, Send } from 'lucide-react';
+import { Send } from 'lucide-react';
 import { apiGet } from '@/lib/api';
 import { NoticeBar } from '@/components/home/NoticeBar';
 import { HeroSlider } from '@/components/home/HeroSlider';
 import { ProductCard, type ProductLite } from '@/components/home/ProductCard';
 import { LatestOrders } from '@/components/home/LatestOrders';
 import { TopRankedUsers, type TopUser } from '@/components/home/TopRankedUsers';
+import { InstallAppButton } from '@/components/home/InstallAppButton';
 
 interface Product extends ProductLite {
   category: { id: number; title: string; orderColumn?: number } | null;
@@ -101,16 +102,7 @@ export default async function HomePage() {
 
         {/* CTA strip */}
         <section className="grid gap-4 sm:grid-cols-2">
-          <a
-            href="#"
-            className="flex items-center gap-4 rounded-2xl bg-slate-900 p-5 text-white transition hover:bg-slate-800"
-          >
-            <Play size={28} className="fill-white" />
-            <div>
-              <p className="text-xs opacity-70">Get it on</p>
-              <p className="text-lg font-bold">Google Play</p>
-            </div>
-          </a>
+          <InstallAppButton />
           <Link
             href="/#products"
             className="flex items-center gap-4 rounded-2xl bg-primary p-5 text-white transition hover:bg-primary-dark"

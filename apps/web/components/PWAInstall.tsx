@@ -2,45 +2,32 @@
 
 import { useEffect, useState } from 'react';
 import { Download, X } from 'lucide-react';
-
-interface BeforeInstallPromptEvent extends Event {
-  prompt: () => Promise<void>;
-  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
-}
+import { useInstallState, promptInstall } from '@/lib/pwa';
 
 export function PWAInstall() {
-  const [deferred, setDeferred] = useState<BeforeInstallPromptEvent | null>(null);
-  const [show, setShow] = useState(false);
+  // ইনস্টল-অবস্থা শেয়ার্ড স্টোর থেকে (হোমের "ইনস্টল করুন" বাটনও একই deferred ব্যবহার করে)।
+  const state = useInstallState();
+  const [dismissed, setDismissed] = useState(true);
 
   useEffect(() => {
-    // Register the service worker.
+    // সার্ভিস ওয়ার্কার রেজিস্টার (গ্লোবাল mount point এখানেই)।
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js').catch(() => undefined);
     }
-
-    const handler = (e: Event) => {
-      e.preventDefault();
-      setDeferred(e as BeforeInstallPromptEvent);
-      if (!localStorage.getItem('pwa-dismissed')) setShow(true);
-    };
-    window.addEventListener('beforeinstallprompt', handler);
-    return () => window.removeEventListener('beforeinstallprompt', handler);
+    // localStorage শুধু ক্লায়েন্টে — mount-এর পর আসল dismiss-অবস্থা পড়ি।
+    setDismissed(!!localStorage.getItem('pwa-dismissed'));
   }, []);
 
   async function install() {
-    if (!deferred) return;
-    await deferred.prompt();
-    await deferred.userChoice;
-    setShow(false);
-    setDeferred(null);
+    await promptInstall();
   }
 
   function dismiss() {
     localStorage.setItem('pwa-dismissed', '1');
-    setShow(false);
+    setDismissed(true);
   }
 
-  if (!show) return null;
+  if (state !== 'ready' || dismissed) return null;
 
   return (
     <div className="fixed inset-x-4 bottom-24 z-50 mx-auto max-w-sm rounded-2xl border border-primary/20 bg-white p-4 shadow-card md:bottom-6">
