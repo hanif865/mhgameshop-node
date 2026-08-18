@@ -32,12 +32,17 @@ export interface LikeResult {
 
 async function conf() {
   const s = await gs();
-  const apiKey = s.str('like_api_key') || env.LIKE_API_KEY || '';
+  // অ্যাডমিনে key/URL পেস্ট করার সময় ভুলে সামনে/পিছে স্পেস এসে গেলে key
+  // encodeURIComponent-এ %20 হয়ে "Invalid Key" দিত (অর্ডার ক্যান্সেল হত) —
+  // তাই সবসময় trim করি।
+  const apiKey = (s.str('like_api_key') || env.LIKE_API_KEY || '').trim();
   const baseUrl = (
     s.str('like_api_base_url') ||
     env.LIKE_API_BASE_URL ||
     'https://ffbaazar.shop'
-  ).replace(/\/+$/, '');
+  )
+    .trim()
+    .replace(/\/+$/, '');
   return { apiKey, baseUrl };
 }
 

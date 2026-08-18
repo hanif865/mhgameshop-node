@@ -27,10 +27,11 @@ import type { LikeResult } from './autolike.provider';
 
 async function conf() {
   const s = await gs();
-  const apiKey = s.str('pinbot_like_api_key') || env.PINBOT_LIKE_API_KEY;
-  const baseUrl = (
-    s.str('pinbot_like_base_url') || env.PINBOT_LIKE_BASE_URL
-  ).replace(/\/+$/, '');
+  // key/URL পেস্টে ভুলে স্পেস এলে API "Invalid Key"/auth-fail দিত — তাই trim করি।
+  const apiKey = (s.str('pinbot_like_api_key') || env.PINBOT_LIKE_API_KEY || '').trim();
+  const baseUrl = (s.str('pinbot_like_base_url') || env.PINBOT_LIKE_BASE_URL || '')
+    .trim()
+    .replace(/\/+$/, '');
   return { apiKey, baseUrl };
 }
 
