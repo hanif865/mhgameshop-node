@@ -254,7 +254,7 @@ export default function UsersPage() {
                 <div className="mb-2 space-y-1">
                   {prices.map((p) => (
                     <div key={p.variation_id} className="flex items-center justify-between rounded bg-slate-50 px-2 py-1 text-sm">
-                      <span>{p.ptitle} — {p.title}: <b className="text-primary-dark">৳{p.price.toFixed(2)}</b></span>
+                      <span>{p.ptitle} — {p.title}: <b className="text-primary-dark">{money(p.price)}</b></span>
                       <button onClick={() => removePrice(p.variation_id)} className="text-red-500 hover:text-red-700">
                         <Trash2 size={13} />
                       </button>
@@ -277,7 +277,7 @@ export default function UsersPage() {
                       return !q || `${v.product} ${v.title}`.toLowerCase().includes(q);
                     })
                     .map((v) => (
-                      <option key={v.id} value={v.id}>{v.product} — {v.title} (৳{v.price})</option>
+                      <option key={v.id} value={v.id}>{v.product} — {v.title} ({money(v.price)})</option>
                     ))}
                 </select>
                 <input

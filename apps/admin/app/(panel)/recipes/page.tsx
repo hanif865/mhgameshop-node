@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Plus, Trash2, Loader2 } from 'lucide-react';
 import { apiGet, apiPost, apiDelete } from '@/lib/api';
+import { money } from '@/lib/format';
 import { Modal } from '@/components/Modal';
 import { useToast } from '@/components/ui/Toast';
 
@@ -149,14 +150,14 @@ export default function RecipesPage() {
               {fVariations.length > 0 && (
                 <optgroup label="Variations">
                   {fVariations.map((v) => (
-                    <option key={`v${v.id}`} value={`v:${v.id}`}>{v.product} — {v.title} (৳{v.price})</option>
+                    <option key={`v${v.id}`} value={`v:${v.id}`}>{v.product} — {v.title} ({money(v.price)})</option>
                   ))}
                 </optgroup>
               )}
               {fCombos.length > 0 && (
                 <optgroup label="Combo Packages">
                   {fCombos.map((c) => (
-                    <option key={`c${c.id}`} value={`c:${c.id}`}>🎁 {c.product} — {c.title} (৳{c.price})</option>
+                    <option key={`c${c.id}`} value={`c:${c.id}`}>🎁 {c.product} — {c.title} ({money(c.price)})</option>
                   ))}
                 </optgroup>
               )}

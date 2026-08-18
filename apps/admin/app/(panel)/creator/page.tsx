@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Loader2, Check, X, ExternalLink } from 'lucide-react';
 import { apiGet, apiPost } from '@/lib/api';
+import { money } from '@/lib/format';
 import { Modal } from '@/components/Modal';
 import { useToast } from '@/components/ui/Toast';
 
@@ -121,7 +122,7 @@ export default function CreatorPage() {
                   {s.views != null && <p className="text-xs text-slate-500">Claimed views: {s.views.toLocaleString()}</p>}
                   {s.note && <p className="mt-1 text-sm text-slate-600">“{s.note}”</p>}
                   {s.status === 'approved' && (
-                    <p className="mt-1 text-sm font-semibold text-green-600">Paid ৳{s.bonus.toFixed(2)}</p>
+                    <p className="mt-1 text-sm font-semibold text-green-600">Paid {money(s.bonus)}</p>
                   )}
                   {s.admin_note && <p className="mt-1 text-xs text-slate-400">Note: {s.admin_note}</p>}
                 </div>

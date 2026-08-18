@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Search, Plus, Trash2, Loader2 } from 'lucide-react';
 import { apiGet, apiPost, apiDelete } from '@/lib/api';
+import { money } from '@/lib/format';
 import { Modal } from '@/components/Modal';
 import { useToast } from '@/components/ui/Toast';
 
@@ -124,7 +125,7 @@ export default function UserPricesPage() {
                 <div key={p.variation_id} className="flex items-center justify-between rounded-lg border border-slate-200 bg-white p-3">
                   <div>
                     <p className="font-medium text-slate-800">{p.ptitle} — {p.title}</p>
-                    <p className="text-sm font-bold text-primary-dark">৳{p.price.toFixed(2)}</p>
+                    <p className="text-sm font-bold text-primary-dark">{money(p.price)}</p>
                   </div>
                   <button onClick={() => remove(p.variation_id)} className="btn-danger px-2 py-1"><Trash2 size={14} /></button>
                 </div>
@@ -150,7 +151,7 @@ export default function UserPricesPage() {
                 const list = packs.filter((v) => !q || `${v.product} ${v.title}`.toLowerCase().includes(q));
                 if (list.length === 0) return <option value="">No match</option>;
                 return list.map((v) => (
-                  <option key={v.id} value={v.id}>{v.product} — {v.title} (global ৳{v.price})</option>
+                  <option key={v.id} value={v.id}>{v.product} — {v.title} (global {money(v.price)})</option>
                 ));
               })()}
             </select>

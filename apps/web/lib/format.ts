@@ -1,6 +1,7 @@
 export function money(value: number | string | null | undefined): string {
   const n = Number(value ?? 0);
-  return `৳${n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  // সবসময় রাউন্ড ফিগার — কোনো দশমিক দেখাবে না (নিকটতম পূর্ণসংখ্যায়)।
+  return `৳${n.toLocaleString('en-US', { maximumFractionDigits: 0 })}`;
 }
 
 export function formatDate(value: string | Date | null | undefined): string {

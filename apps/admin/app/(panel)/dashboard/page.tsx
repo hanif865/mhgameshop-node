@@ -106,7 +106,7 @@ export default function DashboardPage() {
                     {u.name}
                     {u.role === 'admin' && <span className="ml-1 text-xs text-primary-dark">(admin)</span>}
                   </p>
-                  <p className="text-xs text-slate-400">{u.email} · ৳{u.balance.toFixed(2)}</p>
+                  <p className="text-xs text-slate-400">{u.email} · {money(u.balance)}</p>
                 </div>
               </div>
             ))}
