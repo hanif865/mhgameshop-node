@@ -19,6 +19,8 @@ const PUBLIC_SETTING_KEYS = new Set([
   'wallet', 'uddoktapay_enabled', 'wallet_pay_image', 'instant_pay_image', 'unipin_redeem_url',
   'maintenance_mode', 'maintenance_message',
   'meta_title', 'meta_description', 'meta_keywords',
+  // Facebook Pixel — শুধু এই দুটো ক্লায়েন্টে যাবে; CAPI token/test-code কখনো নয়।
+  'fb_pixel_id', 'fb_pixel_enabled',
 ]);
 
 // GET /api/settings — only whitelisted, safe-to-expose settings.

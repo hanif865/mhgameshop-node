@@ -11,6 +11,7 @@ import { useSettings } from '@/lib/settings';
 import { apiGet, apiPost } from '@/lib/api';
 import { imageUrl } from '@/lib/config';
 import { money } from '@/lib/format';
+import { fbTrack, getFbCookies } from '@/lib/fbpixel';
 import { readUidHistory, rememberUid } from '@/lib/uidHistory';
 import { SpecialLockCard } from '@/components/checkout/SpecialLockCard';
 
@@ -97,6 +98,20 @@ export function Checkout({ product }: { product: CheckoutProduct }) {
   useEffect(() => {
     setQuantity(1);
   }, [selection?.id, selection?.kind]);
+
+  // প্রোডাক্ট পেজ খুললে Facebook ViewContent — value = সবচেয়ে সস্তা প্যাকেজের দাম।
+  useEffect(() => {
+    const prices = product.variations.map((v) => Number(v.price)).filter((n) => n > 0);
+    const minPrice = prices.length ? Math.min(...prices) : 0;
+    fbTrack('ViewContent', {
+      content_type: 'product',
+      content_ids: [String(product.id)],
+      content_name: product.title,
+      value: minPrice,
+      currency: 'BDT',
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [product.id]);
 
   // অন-ডিভাইস সেভ করা UID লোড (গেস্ট/লগইন—উভয়েই datalist সাজেশন পাবে)।
   useEffect(() => {
@@ -189,6 +204,15 @@ export function Checkout({ product }: { product: CheckoutProduct }) {
     }
 
     setSubmitting(true);
+    // অর্ডার সাবমিটের ঠিক আগে Facebook InitiateCheckout।
+    fbTrack('InitiateCheckout', {
+      content_type: 'product',
+      content_ids: [String(product.id)],
+      content_name: product.title,
+      value: selectedPrice,
+      currency: 'BDT',
+      num_items: qty,
+    });
     try {
       const res = await apiPost<{ order_id: number; redirect_url?: string }>('/api/orders', {
         variation_id: variationValue,
@@ -196,6 +220,8 @@ export function Checkout({ product }: { product: CheckoutProduct }) {
         account_info: accountInfo,
         quantity: qty,
         idempotency_key: crypto.randomUUID(),
+        // সার্ভার CAPI ম্যাচের জন্য ব্রাউজারের _fbp/_fbc কুকি পাঠাই।
+        ...getFbCookies(),
       });
       if (!res.success) {
         toast.error(res.message || 'Order failed.');
@@ -216,6 +242,20 @@ export function Checkout({ product }: { product: CheckoutProduct }) {
         window.location.href = redirect;
         return;
       }
+      // ওয়ালেট অর্ডার — রিডাইরেক্ট নেই মানে এখানেই সফল। ব্রাউজার Purchase একই
+      // event_id-তে (`purchase_order_<id>`) ফায়ার করি — সার্ভার CAPI Purchase-এর
+      // সাথে Facebook dedup করবে, ডাবল-কাউন্ট হবে না।
+      fbTrack(
+        'Purchase',
+        {
+          content_type: 'product',
+          content_ids: [String(product.id)],
+          content_name: product.title,
+          value: selectedPrice,
+          currency: 'BDT',
+        },
+        `purchase_order_${(res as any).order_id}`,
+      );
       toast.success('অর্ডার সফল হয়েছে!');
       router.push(product.type === 'voucher' ? '/user/codes' : '/user/orders');
     } catch {

@@ -13,6 +13,7 @@ import { newOrder } from './notification.service';
 import { processComboTopup } from './combo-order.service';
 import { enqueueAutoTopup } from '../queue';
 import { emitOrderStatus } from '../realtime';
+import { storeFbContext, firePurchaseForOrder, type FbTracking } from './facebook.service';
 
 const ACCOUNT_INFO_TYPES = ['topup', 'ingame', 'subscription', 'autolike'];
 
@@ -141,6 +142,8 @@ export interface AddOrderInput {
   accountInfo: Record<string, string> | null;
   quantity?: number;
   source?: 'web' | 'telegram';
+  // Facebook CAPI ম্যাচ-সিগন্যাল — অর্ডার তৈরির সময় ধরা (ঐচ্ছিক; বট-অর্ডারে থাকে না)।
+  tracking?: FbTracking | null;
 }
 
 export interface AddOrderResult {
@@ -155,14 +158,15 @@ export async function addOrder(input: AddOrderInput): Promise<AddOrderResult> {
   const quantity = Math.max(1, input.quantity ?? 1);
 
   const source = input.source ?? 'web';
+  const tracking = input.tracking ?? null;
 
   // নির্দিষ্ট UID-গুলোর মাসে-একবার লিমিট (normal + combo — dispatch-এর আগেই চেক)
   await assertUidTopupAllowed(input.accountInfo);
 
   if (input.variationId.startsWith('combo-')) {
-    return addComboOrder({ ...input, quantity, source });
+    return addComboOrder({ ...input, quantity, source, tracking });
   }
-  return addNormalOrder({ ...input, quantity, source });
+  return addNormalOrder({ ...input, quantity, source, tracking });
 }
 
 // ---------------------------------------------------------------------------
@@ -230,6 +234,10 @@ async function addNormalOrder(input: Required<AddOrderInput>): Promise<AddOrderR
     include: { user: true, variation: { include: { product: true } }, product: true },
   });
 
+  // Facebook ম্যাচ-সিগন্যাল রাখি (গেটওয়ে হলে finalizePayment-এর ভেতর সিঙ্ক্রোনাস
+  // wallet fulfil হওয়ার আগেই লেখা জরুরি — race এড়াতে এখানেই)।
+  await storeFbContext(order.id, input.tracking);
+
   return finalizePayment(order, input.paymentMethod);
 }
 
@@ -281,6 +289,8 @@ async function addComboOrder(input: Required<AddOrderInput>): Promise<AddOrderRe
     },
     include: { user: true, comboPackage: true, product: true },
   });
+
+  await storeFbContext(order.id, input.tracking);
 
   return finalizePayment(order, input.paymentMethod);
 }
@@ -387,6 +397,11 @@ export async function completeOrder(
 // fulfilOrder — shared fulfilment (voucher / topup / combo)
 // ---------------------------------------------------------------------------
 async function fulfilOrder(order: any): Promise<void> {
+  // Model A — প্রতিটি সফল পেইড অর্ডার = Purchase (wallet ও gateway দুই পথই এই
+  // choke point-এ মেলে, অর্ডার-প্রতি একবার)। fire-and-forget: CAPI ব্যর্থ হলেও
+  // ফুলফিলমেন্ট কখনো আটকাবে না।
+  void firePurchaseForOrder(order).catch(() => {});
+
   // Combo
   if (order.comboPackageId) {
     await prisma.order.update({ where: { id: order.id }, data: { status: 'processing' } });

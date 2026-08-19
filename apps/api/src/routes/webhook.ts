@@ -153,7 +153,9 @@ async function handleCallback(req: Request, res: any) {
           })
         : null;
       const dest = order?.product?.type === 'voucher' ? 'codes' : 'orders';
-      return res.redirect(`${env.WEB_URL}/user/${dest}?status=success`);
+      // ফেরত-পেজে order_id দিই — সেখানে ব্রাউজার Purchase একই event_id-তে ফায়ার
+      // হবে, সার্ভার CAPI Purchase-এর সাথে Facebook dedup করবে।
+      return res.redirect(`${env.WEB_URL}/user/${dest}?status=success&fb_purchase=${meta.order_id}`);
     }
     return res.redirect(`${env.WEB_URL}/user/orders?status=success`);
   } catch (e) {

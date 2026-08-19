@@ -9,6 +9,7 @@ import { useToast } from '@/components/ui/Toast';
 import { useSettings } from '@/lib/settings';
 import { API_URL, imageUrl } from '@/lib/config';
 import { apiGet } from '@/lib/api';
+import { fbTrack } from '@/lib/fbpixel';
 
 export default function RegisterPage() {
   const { register } = useAuth();
@@ -31,6 +32,7 @@ export default function RegisterPage() {
     setLoading(true);
     try {
       await register(name, email, password, ref || undefined);
+      fbTrack('CompleteRegistration');
       toast.success('Account created!');
       // নতুন ইউজার — স্পিন অফার চালু ও করা যাবে হলে welcome পপ-আপসহ স্পিন পেজে
       try {

@@ -16,6 +16,9 @@ const createSchema = z.object({
   account_info: z.record(z.string()).nullable().optional(),
   quantity: z.coerce.number().int().min(1).max(100).optional(),
   idempotency_key: z.string().min(8).max(64),
+  // Facebook Pixel কুকি — ব্রাউজার থেকে পাঠানো হয় (সার্ভার-সাইড CAPI ম্যাচ)।
+  fbp: z.string().max(256).optional(),
+  fbc: z.string().max(256).optional(),
 });
 
 // POST /api/orders
@@ -44,6 +47,15 @@ router.post(
       paymentMethod: body.payment_method,
       accountInfo: body.account_info ?? null,
       quantity: body.quantity,
+      // Facebook CAPI ম্যাচ-সিগন্যাল — req থেকে তুলে রাখি (গেটওয়ে ফেরার পথে req
+      // থাকে না, তাই এখানেই ধরে Redis-এ রাখা হয়)।
+      tracking: {
+        clientIp: req.ip ?? null,
+        userAgent: req.headers['user-agent'] ?? null,
+        fbp: body.fbp ?? req.cookies?._fbp ?? null,
+        fbc: body.fbc ?? req.cookies?._fbc ?? null,
+        eventSourceUrl: (req.headers['referer'] as string | undefined) ?? null,
+      },
     });
 
     return res.status(201).json({ success: true, ...result });

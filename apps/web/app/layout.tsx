@@ -6,6 +6,7 @@ import { imageUrl } from '@/lib/config';
 import type { SettingsMap } from '@/lib/settings';
 import { Providers } from '@/components/Providers';
 import { Presence } from '@/components/Presence';
+import { FacebookPixel } from '@/components/FacebookPixel';
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
 import { MobileBottomNav } from '@/components/layout/MobileBottomNav';
@@ -39,6 +40,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
     <html lang="en">
       <body className="min-h-screen">
         <Providers settings={settings}>
+          <FacebookPixel />
           <Navbar />
           <main className="min-h-[70vh] pb-16 md:pb-0">{children}</main>
           <Footer />

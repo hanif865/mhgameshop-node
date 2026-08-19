@@ -131,6 +131,15 @@ const SECTIONS: Section[] = [
     ],
   },
   {
+    title: 'Facebook Pixel & Conversions API',
+    fields: [
+      { key: 'fb_pixel_enabled', label: 'Enable Facebook Pixel + CAPI', type: 'toggle' },
+      { key: 'fb_pixel_id', label: 'Pixel ID' },
+      { key: 'fb_capi_access_token', label: 'Conversions API Access Token', type: 'password' },
+      { key: 'fb_test_event_code', label: 'Test Event Code (Events Manager টেস্টের সময়)' },
+    ],
+  },
+  {
     title: 'Notice Bar',
     fields: [
       { key: 'enable_notice', label: 'Enable Notice', type: 'toggle' },

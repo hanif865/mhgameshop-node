@@ -3,6 +3,7 @@ import { env } from '../config/env';
 import { HttpError } from '../middleware/error';
 import { createPayment } from '../providers/uddoktapay.provider';
 import { newDeposit } from './notification.service';
+import { fireAddFundsForDeposit } from './facebook.service';
 
 /**
  * Deposit flow — mirrors Laravel DepositService.
@@ -73,4 +74,9 @@ export async function completeDeposit(
   ]);
 
   await newDeposit({ ...deposit, paymentMethod });
+
+  // ওয়ালেটে ফান্ড যোগ → আলাদা কাস্টম ইভেন্ট `AddFunds` (Purchase নয়)। Model A-তে
+  // ওয়ালেট-ফান্ডেড অর্ডারে Purchase আলাদা করে ফায়ার হয়, তাই ডিপোজিটকে Purchase
+  // ধরলে ডাবল-কাউন্ট হত। fire-and-forget — ডিপোজিট-ফ্লো কখনো আটকাবে না।
+  void fireAddFundsForDeposit(deposit).catch(() => {});
 }
