@@ -83,6 +83,9 @@ export function Checkout({ product }: { product: CheckoutProduct }) {
   const [uidHistory, setUidHistory] = useState<string[]>([]);
   const [spend, setSpend] = useState<number | null>(null);
   const [spendLoading, setSpendLoading] = useState(false);
+  // অ্যাডমিন-সেট করা এই ইউজারের স্পেশাল দাম (user_prices) — লগইন থাকলে প্যাকেজের
+  // দামে বসাই, বট যেভাবে দেখায় ঠিক সেভাবে। { variationId: price }
+  const [priceOverrides, setPriceOverrides] = useState<Record<number, number>>({});
 
   // Auto-select Wallet once the user loads with a positive balance (user is
   // fetched async, so the initial state can't rely on it). Manual changes stick.
@@ -118,6 +121,18 @@ export function Checkout({ product }: { product: CheckoutProduct }) {
     setUidHistory(readUidHistory());
   }, []);
 
+  // লগইন থাকলে এই ইউজারের স্পেশাল দাম আনি — প্যাকেজের গ্লোবাল দামের বদলে বসবে।
+  // লগআউট করলে override মুছে গ্লোবাল দামে ফিরি।
+  useEffect(() => {
+    if (!user) {
+      setPriceOverrides({});
+      return;
+    }
+    apiGet<{ overrides: Record<number, number> }>('/api/user/prices')
+      .then((r) => setPriceOverrides(r.data?.overrides ?? {}))
+      .catch(() => setPriceOverrides({}));
+  }, [user]);
+
   // সেভ করা Player ID লোড (লগইন থাকলে, player-id মোডে)
   async function loadSaved() {
     if (!user || !needsPlayerId) return;
@@ -151,7 +166,17 @@ export function Checkout({ product }: { product: CheckoutProduct }) {
   }
 
   const qty = isVoucher ? quantity : 1;
-  const selectedPrice = (selection ? Number(selection.price) : 0) * qty;
+  // ভ্যারিয়েশনের কার্যকর দাম — এই ইউজারের স্পেশাল দাম থাকলে সেটা, নইলে গ্লোবাল।
+  const priceOf = (variationId: number, base: string) =>
+    priceOverrides[variationId] !== undefined ? String(priceOverrides[variationId]) : base;
+  // override পরে লোড হলেও টোটাল যাতে ঠিক থাকে — selection.price-এ ভরসা না করে
+  // এখানেই কার্যকর দাম বের করি (কম্বোতে override নেই)।
+  const selectionUnit = selection
+    ? selection.kind === 'variation'
+      ? Number(priceOf(selection.id, selection.price))
+      : Number(selection.price)
+    : 0;
+  const selectedPrice = selectionUnit * qty;
   const maxQty = isVoucher && selection ? Math.max(1, selection.stock) : 99;
   const typeLabel = product.type.charAt(0).toUpperCase() + product.type.slice(1);
 
@@ -312,11 +337,11 @@ export function Checkout({ product }: { product: CheckoutProduct }) {
                 <PackageTile
                   key={`v-${v.id}`}
                   title={v.title}
-                  price={v.price}
+                  price={priceOf(v.id, v.price)}
                   outOfStock={v.stock <= 0}
                   active={selection?.kind === 'variation' && selection.id === v.id}
                   onClick={() =>
-                    setSelection({ kind: 'variation', id: v.id, price: v.price, stock: v.stock })
+                    setSelection({ kind: 'variation', id: v.id, price: priceOf(v.id, v.price), stock: v.stock })
                   }
                 />
               ))}

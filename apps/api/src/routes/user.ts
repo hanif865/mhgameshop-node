@@ -69,6 +69,21 @@ router.put(
   }),
 );
 
+// GET /api/user/prices
+// এই ইউজারের জন্য অ্যাডমিন-সেট করা স্পেশাল দাম (user_prices) — বট যেভাবে দাম
+// বসায় ঠিক সেভাবে ওয়েবসাইটেও প্যাকেজের দামে বসানোর জন্য। শুধু ভ্যারিয়েশন override
+// (কম্বোতে user_prices override নেই)। কোনো override না থাকলে খালি ম্যাপ।
+router.get(
+  '/prices',
+  asyncHandler(async (req, res) => {
+    const rows = await prisma.$queryRaw<{ variation_id: number; price: unknown }[]>`
+      SELECT variation_id, price FROM user_prices WHERE user_id = ${req.userId!}`;
+    const overrides: Record<number, number> = {};
+    for (const r of rows) overrides[Number(r.variation_id)] = Number(r.price);
+    return ok(res, { overrides });
+  }),
+);
+
 // GET /api/user/orders
 router.get(
   '/orders',
