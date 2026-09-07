@@ -9,6 +9,7 @@ import { asyncHandler, HttpError } from '../middleware/error';
 import { authLimiter } from '../middleware/rateLimiter';
 import { ok, created } from '../utils/response';
 import { attachReferrer } from '../services/referral.service';
+import { upsertGoogleUser, verifyGoogleIdToken } from '../services/google-auth.service';
 
 const router = Router();
 
@@ -93,7 +94,7 @@ router.post(
   }),
 );
 
-// ---- Google OAuth ----
+// ---- Google OAuth (web browser flow) ----
 router.get(
   '/google',
   passport.authenticate('google', { scope: ['profile', 'email'], session: false }),
@@ -113,6 +114,40 @@ router.get(
     const newParam = u.isNew ? '&new=1' : '';
     res.redirect(`${env.WEB_URL}/auth/callback?token=${token}${newParam}`);
   },
+);
+
+// ---- Google native sign-in (mobile app) ----
+// The app signs in with the native Google SDK and posts the resulting ID token
+// here; we verify it with Google and issue our own JWT. `serverClientId` is
+// returned so the app never has to hardcode a client ID.
+router.get('/google/config', (_req, res) => {
+  return ok(res, {
+    enabled: Boolean(env.GOOGLE_CLIENT_ID),
+    serverClientId: env.GOOGLE_CLIENT_ID || null,
+  });
+});
+
+const googleTokenSchema = z.object({
+  idToken: z.string().min(20),
+  // রেফার কোড (ঐচ্ছিক) — নতুন অ্যাকাউন্ট হলেই কাজে লাগে
+  ref: z.string().trim().max(32).optional(),
+});
+
+router.post(
+  '/google/token',
+  authLimiter,
+  asyncHandler(async (req, res) => {
+    const { idToken, ref } = googleTokenSchema.parse(req.body);
+
+    const identity = await verifyGoogleIdToken(idToken);
+    const { user, isNew } = await upsertGoogleUser(identity);
+
+    if (isNew) await attachReferrer(user.id, ref);
+
+    const token = signToken({ sub: user.id, role: user.role });
+    setAuthCookie(res, token);
+    return ok(res, { user: publicUser(user), token, isNew }, 'Login successful.');
+  }),
 );
 
 // ---- Logout ----
