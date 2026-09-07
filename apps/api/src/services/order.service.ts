@@ -5,8 +5,9 @@ import { strRandom, money } from '../utils/helpers';
 import { HttpError } from '../middleware/error';
 import { env } from '../config/env';
 import { logger } from '../utils/logger';
-import { placeOrder } from '../providers/topup';
+import { placeOrder, activeGateway } from '../providers/topup';
 import { placeLikeOrder } from '../providers/like';
+import { topupToUid, indoTopup, buyUcCodes } from '../providers/ucbot.provider';
 import { tryPoolTopup, tryPoolVoucherSale, restorePoolCodes, poolStockFor } from './pool.service';
 import { createPayment } from '../providers/uddoktapay.provider';
 import { newOrder } from './notification.service';
@@ -443,6 +444,12 @@ export async function deliverVouchers(order: any): Promise<void> {
   // রেসিপি থাকলে UC-পুল থেকে কোড দিই (pinbot লাগে না — কাস্টমার কোডই পায়)
   if (await tryPoolVoucherSale(order)) return;
 
+  // ucbot গেটওয়ে + automatic ভ্যারিয়েশন হলে /api/uc থেকে লাইভ কোড কিনে দিই।
+  // (automatic=false হলে নিচের স্টোর-করা কোড টেবিল থেকেই যাবে — backward compatible)
+  if (order.variation?.automatic && (await activeGateway()) === 'ucbot') {
+    return deliverUcbotVouchers(order);
+  }
+
   const vouchers = await prisma.voucher.findMany({
     where: { variationId: order.variationId, status: 'available' },
     take: order.quantity,
@@ -466,6 +473,56 @@ export async function deliverVouchers(order: any): Promise<void> {
       data: { voucherCode: vouchers.map((v) => v.code).join(','), status: 'completed' },
     }),
   ]);
+}
+
+/**
+ * Live UC-code voucher sale via ucbot /api/uc (no stored codes, no UID).
+ *
+ * completeOrder() has ALREADY set this voucher order to 'completed' before
+ * calling deliverVouchers(). So on a failed live buy we must flip it back to
+ * 'cancelled' and refund — never leave a "completed" order with no code.
+ * A thrown error (transient) bubbles up so completeOrder's caller can surface
+ * it; the order stays 'completed' with no code only in that rare transient
+ * case, which is caught below and turned into a refund too.
+ */
+async function deliverUcbotVouchers(order: any): Promise<void> {
+  let result;
+  try {
+    result = await buyUcCodes(order);
+  } catch (e) {
+    // ক্ষণস্থায়ী ব্যর্থতা — কাস্টমার কোড পায়নি, তাই completed রেখে দেওয়া যাবে না।
+    logger.error(`❌ UCBot voucher buy error (order ${order.id}): ${(e as Error).message} — refunding`);
+    await refundCompletedVoucherOrder(order);
+    return;
+  }
+
+  if (!result.ok || !result.codes?.length) {
+    logger.warn(`⚠️ UCBot voucher buy delivered 0 (order ${order.id}): ${result.message} — refunding`);
+    await refundCompletedVoucherOrder(order);
+    return;
+  }
+
+  await prisma.$transaction([
+    prisma.variation.update({
+      where: { id: order.variationId },
+      data: { stock: { decrement: result.codes.length } },
+    }),
+    prisma.order.update({
+      where: { id: order.id },
+      data: { voucherCode: result.codes.join(','), status: 'completed' },
+    }),
+  ]);
+  logger.info(`🎫 UCBot voucher sale ${order.id}: ${result.codes.length} code(s) delivered`);
+  await emitOrderStatus(order.id);
+}
+
+/** Flip an already-'completed' voucher order back to cancelled + refund. */
+async function refundCompletedVoucherOrder(order: any): Promise<void> {
+  const fresh = await prisma.order.findUnique({ where: { id: order.id } });
+  if (!fresh || fresh.status === 'cancelled') return;
+  await prisma.order.update({ where: { id: order.id }, data: { status: 'cancelled' } });
+  await cancelOrder(fresh);
+  await emitOrderStatus(order.id);
 }
 
 // ---------------------------------------------------------------------------
@@ -499,14 +556,22 @@ export async function runAutoTopup(order: any): Promise<void> {
   // সক্রিয় gateway অনুযায়ী কনফিগ আছে কিনা দেখি (আগে শুধু topupnet এর
   // free_fire_server_url দেখত, তাই pinbot এ চললেও ওটা সেট রাখতে হত)
   const gateway = (s.str('topup_gateway') || 'topupnet').trim().toLowerCase();
-  const providerReady = gateway === 'pinbot' ? !!s.str('pinbot_api_key') : !!s.str('free_fire_server_url');
+  const providerReady =
+    gateway === 'pinbot'
+      ? !!s.str('pinbot_api_key')
+      : gateway === 'ucbot'
+        ? !!s.str('ucbot_api_key')
+        : !!s.str('free_fire_server_url');
   if (!providerReady) {
     logger.warn(`⚠️ Auto topup: ${gateway} gateway কনফিগ করা নেই (order ${order.id})`);
     return;
   }
 
-  // UC-পুলে রেসিপি থাকলে সেখান থেকেই ফুলফিল হবে (নতুন পদ্ধতি)
+  // UC-পুলে রেসিপি থাকলে সেখান থেকেই ফুলফিল হবে (gateway-নিরপেক্ষ, তাই আগে)
   if (await tryPoolTopup(order)) return;
+
+  // ucbot synchronous — নিজস্ব inline complete/refund পথে যায় (webhook নেই)
+  if (gateway === 'ucbot') return runUcbotTopup(order);
 
   const autoVoucher = await prisma.autoVoucher.findFirst({
     where: { variationId: order.variationId, status: 'available' },
@@ -575,6 +640,37 @@ async function runAutoLike(order: any): Promise<void> {
     data: { status: 'completed', deliveryMessage: msg },
   });
   logger.info(`✅ AutoLike done order ${order.id}: ${result.likesGiven} likes → ${result.nickname}`);
+  await emitOrderStatus(order.id);
+}
+
+/**
+ * ucbot top-up delivery (global UID or Indonesia). Synchronous like auto-like:
+ * the result is in the HTTP response, there is NO webhook. So we complete on
+ * success and cancel+refund when nothing was delivered. A thrown error (transient
+ * / misconfig) bubbles to the worker, which retries and finally refunds.
+ *
+ * Global vs Indonesia is chosen by the variation's `provider` column:
+ * 'indo' → /api/indo, anything else → /api/topup.
+ */
+async function runUcbotTopup(order: any): Promise<void> {
+  await prisma.order.update({ where: { id: order.id }, data: { status: 'autoprocessing' } });
+  await emitOrderStatus(order.id);
+
+  const isIndo = String(order.variation?.provider ?? '').trim().toLowerCase() === 'indo';
+  const result = isIndo ? await indoTopup(order) : await topupToUid(order);
+
+  // কিছুই ডেলিভার হয়নি — রিট্রাই অর্থহীন (ভুল UID / স্টক শেষ ইত্যাদি), এখনই refund।
+  if (!result.ok) {
+    logger.warn(`⚠️ UCBot topup delivered 0 (order ${order.id}): ${result.message} — refunding`);
+    await cancelAndRefundAutoTopup(order.id);
+    return;
+  }
+
+  await prisma.order.update({
+    where: { id: order.id },
+    data: { status: 'completed', deliveryMessage: result.message },
+  });
+  logger.info(`✅ UCBot topup done order ${order.id}: ${result.message}`);
   await emitOrderStatus(order.id);
 }
 

@@ -22,6 +22,8 @@ const DEFAULT_SETTINGS: Record<string, string> = {
   enable_auto_topup: '0',
   topup_provider: 'freefire',
   free_fire_server_url: 'https://api.topupnet.com/api/v1',
+  // ucbot.net gateway base URL (key stays unset; topup_gateway defaults to topupnet)
+  ucbot_base_url: 'https://ucapi.ucbot.net',
   // Top Ranked Users — home leaderboard badge (routes/public.ts:/home/top-users)
   top_users_enabled: '1',
   top_users_monthly: '1',
