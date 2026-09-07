@@ -39,7 +39,7 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
   if (!token) return fail(res, 'Unauthenticated.', 401);
 
   try {
-    const decoded = jwt.verify(token, env.JWT_SECRET) as JwtPayload;
+    const decoded = jwt.verify(token, env.JWT_SECRET) as unknown as JwtPayload;
     const user = await prisma.user.findUnique({
       where: { id: decoded.sub },
       select: { id: true, role: true, status: true },
@@ -70,7 +70,7 @@ export async function optionalAuth(req: Request, _res: Response, next: NextFunct
   const token = extractToken(req);
   if (!token) return next();
   try {
-    const decoded = jwt.verify(token, env.JWT_SECRET) as JwtPayload;
+    const decoded = jwt.verify(token, env.JWT_SECRET) as unknown as JwtPayload;
     req.userId = decoded.sub;
     req.userRole = decoded.role;
   } catch {

@@ -14,7 +14,7 @@ let io: IOServer | null = null;
 function verify(token?: string): { sub: number; role: string } | null {
   if (!token) return null;
   try {
-    return jwt.verify(token, env.JWT_SECRET) as { sub: number; role: string };
+    return jwt.verify(token, env.JWT_SECRET) as unknown as { sub: number; role: string };
   } catch {
     return null;
   }
