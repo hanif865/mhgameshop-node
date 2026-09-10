@@ -54,7 +54,12 @@ async function conf() {
  */
 function isTransient(status: number, errText: string): boolean {
   if (status === 429 || status >= 500) return true;
-  return /did not respond|timeout|timed out|try again|temporarily|too many/i.test(errText);
+  // ডকে যেগুলো সাময়িক বলা: বট টাইমআউট/অফলাইন, মেইনটেন্যান্স, রেট-লিমিট।
+  // এগুলোতে retry করলে ঠিক হতে পারে — তাই throw (worker রিট্রাই)। ব্যবসায়িক
+  // ব্যর্থতা (Invalid UID / স্টক শেষ / due limit) এখানে ধরা পড়বে না → এখনই refund।
+  return /did not respond|timeout|timed out|try again|temporarily|too many|maintenance|not connected|offline|try later|please retry/i.test(
+    errText,
+  );
 }
 
 /**
