@@ -8,10 +8,28 @@ import * as pinbot from './pinbot.provider';
  *
  *   topup_gateway = 'topupnet'  (default — unchanged behaviour)
  *                 | 'pinbot'
+ *                 | 'ucbot'     (synchronous — handled in order.service, NOT here)
  *
  * Everything else in the app imports from here, so switching gateways is a
  * settings change, not a code change.
+ *
+ * NB: ucbot is synchronous (no webhook) and does not fit the async
+ * placeOrder/placeOrderViaShell/placeComboVoucherOrder surface below, so it is
+ * deliberately NOT an impl() branch. order.service checks `activeGateway()` and
+ * routes ucbot orders to its own inline complete/refund path.
  */
+
+/** The configured gateway name, normalised. Falls back to 'topupnet'. */
+export async function activeGateway(): Promise<string> {
+  try {
+    const s = await gs();
+    return (s.str('topup_gateway') || 'topupnet').trim().toLowerCase();
+  } catch (e) {
+    logger.error(`⚠️ topup_gateway lookup failed, using topupnet: ${(e as Error).message}`);
+    return 'topupnet';
+  }
+}
+
 async function impl() {
   try {
     const s = await gs();

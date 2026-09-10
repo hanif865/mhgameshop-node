@@ -1,13 +1,12 @@
 import passport from 'passport';
 import { Strategy as GoogleStrategy, type Profile } from 'passport-google-oauth20';
-import { prisma } from './database';
 import { env } from './env';
-import { strRandom } from '../utils/helpers';
+import { upsertGoogleUser } from '../services/google-auth.service';
 
 /**
  * Google OAuth via Passport (stateless — we issue our own JWT in the callback).
- * Mirrors Laravel SocialLoginController: match by google_id OR email, then
- * update google_id + avatar, or create a new user.
+ * The find-or-create logic is shared with the mobile native flow; see
+ * services/google-auth.service.ts.
  */
 export function configurePassport() {
   if (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET) return;
@@ -23,33 +22,12 @@ export function configurePassport() {
         try {
           const googleId = profile.id;
           const email = profile.emails?.[0]?.value ?? `${googleId}@google.local`;
-          const avatar = profile.photos?.[0]?.value ?? null;
-          const name = profile.displayName || email.split('@')[0];
-
-          let user = await prisma.user.findFirst({
-            where: { OR: [{ googleId }, { email }] },
+          const { user, isNew } = await upsertGoogleUser({
+            googleId,
+            email,
+            name: profile.displayName || email.split('@')[0],
+            avatar: profile.photos?.[0]?.value ?? null,
           });
-          let isNew = false;
-
-          if (user) {
-            user = await prisma.user.update({
-              where: { id: user.id },
-              data: { googleId, googleAvatar: avatar, avatar: user.avatar ?? avatar },
-            });
-          } else {
-            isNew = true;
-            user = await prisma.user.create({
-              data: {
-                name,
-                email,
-                googleId,
-                googleAvatar: avatar,
-                avatar,
-                password: null,
-                role: 'user',
-              },
-            });
-          }
 
           done(null, { id: user.id, role: user.role, isNew });
         } catch (e) {
@@ -61,6 +39,3 @@ export function configurePassport() {
 }
 
 export { passport };
-
-// silence unused import in builds without google configured
-void strRandom;

@@ -32,6 +32,10 @@ const schema = z.object({
   GOOGLE_CALLBACK_URL: z
     .string()
     .default('http://localhost:4000/api/auth/google/callback'),
+  // Android OAuth client ID (package name + SHA-1 fingerprint). Only needed if
+  // the mobile app signs in without passing GOOGLE_CLIENT_ID as its
+  // serverClientId — ID tokens are then issued to the Android client instead.
+  GOOGLE_ANDROID_CLIENT_ID: z.string().optional().default(''),
 
   TOPUPNET_API_KEY: z.string().optional().default(''),
   TOPUPNET_BASE_URL: z.string().default('https://api.topupnet.com/api/v1'),
@@ -41,6 +45,12 @@ const schema = z.object({
   // `topup_gateway` setting is 'pinbot'.
   PINBOT_API_KEY: z.string().optional().default(''),
   PINBOT_BASE_URL: z.string().optional().default('https://api.pinbot.shop'),
+
+  // ucbot.net auto-topup gateway (synchronous — no webhook). DB settings
+  // `ucbot_api_key` / `ucbot_base_url` take precedence; these are the env
+  // fallbacks. Active only when the `topup_gateway` setting is 'ucbot'.
+  UCBOT_API_KEY: z.string().optional().default(''),
+  UCBOT_BASE_URL: z.string().optional().default('https://ucapi.ucbot.net'),
 
   // Free Fire auto-like (ffbaazar.shop personal API). DB setting `like_api_key`
   // takes precedence; this is the env fallback.

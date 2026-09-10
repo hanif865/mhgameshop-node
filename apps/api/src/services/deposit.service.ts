@@ -25,7 +25,7 @@ export async function initiateDeposit(
   const paymentUrl = await createPayment({
     full_name: user.name,
     email: user.email,
-    amount: deposit.amount,
+    amount: deposit.amount.toString(),
     metadata: { deposit_id: deposit.id, kind: 'deposit' },
     // UddoktaPay-licensed domain (Caddy proxies /uddoktapay* to the API).
     redirect_url: `${env.WEB_URL}/uddoktapay/callback`,

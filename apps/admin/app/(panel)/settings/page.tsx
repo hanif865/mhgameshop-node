@@ -57,9 +57,11 @@ const SECTIONS: Section[] = [
     title: 'Auto Topup (PinBot)',
     fields: [
       { key: 'enable_auto_topup', label: 'Enable Auto Topup', type: 'toggle' },
-      { key: 'topup_gateway', label: 'Gateway (pinbot / topupnet)' },
+      { key: 'topup_gateway', label: 'Gateway (topupnet / pinbot / ucbot)' },
       { key: 'pinbot_base_url', label: 'PinBot Base URL' },
       { key: 'pinbot_api_key', label: 'PinBot API Key', type: 'password' },
+      { key: 'ucbot_base_url', label: 'UCBot Base URL' },
+      { key: 'ucbot_api_key', label: 'UCBot API Key (ucapi_...)', type: 'password' },
       { key: 'unipin_redeem_url', label: 'UniPin Redeem URL (My Codes button)' },
     ],
   },
