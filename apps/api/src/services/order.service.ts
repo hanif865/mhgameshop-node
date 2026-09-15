@@ -561,7 +561,9 @@ export async function runAutoTopup(order: any): Promise<void> {
       ? !!s.str('pinbot_api_key')
       : gateway === 'ucbot'
         ? !!s.str('ucbot_api_key')
-        : !!s.str('free_fire_server_url');
+        : gateway === 'nexa'
+          ? !!s.str('nexa_api_key')
+          : !!s.str('free_fire_server_url');
   if (!providerReady) {
     logger.warn(`⚠️ Auto topup: ${gateway} gateway কনফিগ করা নেই (order ${order.id})`);
     return;

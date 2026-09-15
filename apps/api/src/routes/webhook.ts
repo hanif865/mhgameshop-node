@@ -176,7 +176,15 @@ router.post(
 
     let rawOrderId = req.body?.orderid ?? req.body?.merchant_order_id;
     let status = req.body?.status;
-    let content = req.body?.content ?? req.body?.message ?? null;
+    // Nexa reports 'completed' for a fully-delivered order — treat it as
+    // success (topupnet/pinbot only ever send success|failed|partial).
+    if (String(status).toLowerCase() === 'completed') status = 'success';
+    // Nexa may put `batch` at the top level instead of under `content`; fall
+    // back to it so the flatten below still runs.
+    let content =
+      req.body?.content ??
+      req.body?.message ??
+      (Array.isArray(req.body?.batch) ? { batch: req.body.batch } : null);
 
     // PinBot sends content as { batch: [{ ok, detail, uc|package }] } and can
     // report 'partial'. Flatten it to the plain string / success|failed shape
