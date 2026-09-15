@@ -52,6 +52,12 @@ const schema = z.object({
   UCBOT_API_KEY: z.string().optional().default(''),
   UCBOT_BASE_URL: z.string().optional().default('https://ucapi.ucbot.net'),
 
+  // Nexa (api.teamnexa.shop) auto-topup gateway (async — result via webhook).
+  // DB settings `nexa_api_key` / `nexa_base_url` take precedence; these are the
+  // env fallbacks. Active only when the `topup_gateway` setting is 'nexa'.
+  NEXA_API_KEY: z.string().optional().default(''),
+  NEXA_BASE_URL: z.string().optional().default('https://api.teamnexa.shop'),
+
   // Free Fire auto-like (ffbaazar.shop personal API). DB setting `like_api_key`
   // takes precedence; this is the env fallback.
   LIKE_API_KEY: z.string().optional().default(''),

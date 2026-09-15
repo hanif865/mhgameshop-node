@@ -2,12 +2,14 @@ import { gs } from '../utils/settings';
 import { logger } from '../utils/logger';
 import * as topupnet from './topupnet.provider';
 import * as pinbot from './pinbot.provider';
+import * as nexa from './nexa.provider';
 
 /**
  * Picks the auto-topup gateway at call time from the `topup_gateway` setting:
  *
  *   topup_gateway = 'topupnet'  (default — unchanged behaviour)
  *                 | 'pinbot'
+ *                 | 'nexa'      (async — same placeOrder surface as pinbot)
  *                 | 'ucbot'     (synchronous — handled in order.service, NOT here)
  *
  * Everything else in the app imports from here, so switching gateways is a
@@ -35,6 +37,7 @@ async function impl() {
     const s = await gs();
     const gateway = (s.str('topup_gateway') || 'topupnet').trim().toLowerCase();
     if (gateway === 'pinbot') return pinbot;
+    if (gateway === 'nexa') return nexa;
   } catch (e) {
     logger.error(`⚠️ topup_gateway lookup failed, using topupnet: ${(e as Error).message}`);
   }

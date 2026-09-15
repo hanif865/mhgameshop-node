@@ -96,6 +96,17 @@ export default function EditVariation({ params }: { params: { id: string } }) {
               onChange={(e) => setForm({ ...form, providerProductId: e.target.value })}
             />
           </div>
+          <div>
+            <label className="label">Provider (shop / region code)</label>
+            <input
+              className="input"
+              value={form.provider ?? ''}
+              onChange={(e) => setForm({ ...form, provider: e.target.value })}
+            />
+            <p className="mt-1 text-xs text-slate-400">
+              Nexa shell: shell=BD, sgshell=SG, indoshell=Indonesia, myshell=Malaysia · ucbot: indo
+            </p>
+          </div>
           <label className="flex items-center gap-2 text-sm font-medium text-slate-600">
             <input
               type="checkbox"
