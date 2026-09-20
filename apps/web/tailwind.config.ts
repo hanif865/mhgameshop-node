@@ -10,9 +10,9 @@ const config: Config = {
     extend: {
       colors: {
         primary: {
-          DEFAULT: '#16a34a',
-          dark: '#15803d',
-          light: '#22c55e',
+          DEFAULT: '#2563eb',
+          dark: '#1d4ed8',
+          light: '#3b82f6',
         },
         gold: {
           DEFAULT: '#ca8a04',
@@ -24,7 +24,7 @@ const config: Config = {
         sans: ['var(--font-sans)', 'system-ui', 'sans-serif'],
       },
       boxShadow: {
-        card: '0 2px 12px rgba(16, 44, 24, 0.08)',
+        card: '0 2px 12px rgba(37, 99, 235, 0.10)',
       },
     },
   },

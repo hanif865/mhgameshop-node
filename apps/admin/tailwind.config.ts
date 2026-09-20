@@ -5,7 +5,7 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        primary: { DEFAULT: '#16a34a', dark: '#15803d' },
+        primary: { DEFAULT: '#2563eb', dark: '#1d4ed8' },
         accent: { DEFAULT: '#ea580c', dark: '#c2410c' },
       },
       boxShadow: { card: '0 1px 3px rgba(15,23,42,0.08)' },
