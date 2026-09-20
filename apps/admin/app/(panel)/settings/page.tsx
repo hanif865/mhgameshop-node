@@ -287,7 +287,7 @@ export default function SettingsPage() {
                           <input
                             type="color"
                             className="h-10 w-14 rounded border border-slate-200"
-                            value={values[f.key] || '#16a34a'}
+                            value={values[f.key] || '#2563eb'}
                             onChange={(e) => set(f.key, e.target.value)}
                           />
                           <input

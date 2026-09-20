@@ -21,7 +21,7 @@ export function Footer() {
   ].filter((s) => s.url);
 
   return (
-    <footer className="mt-12 bg-gradient-to-br from-primary-dark via-primary to-emerald-700 pb-24 pt-10 text-white md:pb-10">
+    <footer className="mt-12 bg-gradient-to-br from-primary-dark via-primary to-blue-500 pb-24 pt-10 text-white md:pb-10">
       <div className="container-page grid gap-8 md:grid-cols-3">
         {/* Brand */}
         <div>

@@ -14,7 +14,7 @@ import { FloatWidget } from '@/components/layout/FloatWidget';
 import { PWAInstall } from '@/components/PWAInstall';
 
 export const viewport: Viewport = {
-  themeColor: '#16a34a',
+  themeColor: '#0d4edb',
 };
 
 async function getSettings(): Promise<SettingsMap> {

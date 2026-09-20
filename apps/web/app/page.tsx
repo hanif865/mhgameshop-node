@@ -76,7 +76,7 @@ export default async function HomePage() {
         <TopRankedUsers users={topUsers} />
 
         {/* Telegram bot promo */}
-        <section className="overflow-hidden rounded-2xl bg-gradient-to-r from-primary-dark via-primary to-emerald-700 p-6 text-white shadow-lg sm:p-8">
+        <section className="overflow-hidden rounded-2xl bg-gradient-to-r from-primary-dark via-primary to-blue-500 p-6 text-white shadow-lg sm:p-8">
           <div className="flex flex-col items-center gap-5 text-center sm:flex-row sm:justify-between sm:text-left">
             <div className="flex items-center gap-4">
               <span className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-white/15">

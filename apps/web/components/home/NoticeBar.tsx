@@ -14,7 +14,7 @@ export function NoticeBar() {
     <div
       className="flex items-center gap-3 overflow-hidden px-4 py-2 text-sm font-medium"
       style={{
-        background: get('notice_background_color', '#16a34a'),
+        background: get('notice_background_color', '#075ad6'),
         color: get('notice_font_color', '#ffffff'),
       }}
     >
