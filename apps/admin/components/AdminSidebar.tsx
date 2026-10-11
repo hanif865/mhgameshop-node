@@ -44,6 +44,7 @@ const GROUPS: {
     icon: ShoppingCart,
     links: [
       { href: '/orders', label: 'Orders' },
+      { href: '/like-subscriptions', label: 'Like Subscriptions' },
       { href: '/creator', label: 'Creator Videos' },
       { href: '/broadcast', label: 'Broadcast' },
       { href: '/users', label: 'Users' },

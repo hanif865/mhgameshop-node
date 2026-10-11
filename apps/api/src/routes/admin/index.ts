@@ -21,6 +21,7 @@ import pool from './pool';
 import userPrices from './userPrices';
 import creator from './creator';
 import broadcast from './broadcast';
+import likeSubs from './likeSubs';
 
 const router = Router();
 
@@ -57,5 +58,6 @@ router.use('/pool', bustCatalogCache, pool);
 router.use('/user-prices', bustCatalogCache, userPrices);
 router.use('/creator', creator);
 router.use('/broadcast', broadcast);
+router.use('/like-subscriptions', likeSubs);
 
 export default router;

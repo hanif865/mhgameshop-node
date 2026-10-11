@@ -2,6 +2,7 @@ import { gs } from '../utils/settings';
 import { logger } from '../utils/logger';
 import * as amartopupbd from './autolike.provider';
 import * as pinbot from './pinbotlike.provider';
+import * as ucbot from './ucbotlike.provider';
 import type { LikeResult } from './autolike.provider';
 
 /**
@@ -10,6 +11,7 @@ import type { LikeResult } from './autolike.provider';
  *
  *   like_gateway = 'amartopupbd'  (default — unchanged behaviour)
  *                | 'pinbot'
+ *                | 'ucbot'
  *
  * Everything else imports placeLikeOrder from here, so switching gateways is a
  * settings change, not a code change (mirrors providers/topup.ts).
@@ -19,6 +21,7 @@ async function impl() {
     const s = await gs();
     const gateway = (s.str('like_gateway') || 'amartopupbd').trim().toLowerCase();
     if (gateway === 'pinbot') return pinbot;
+    if (gateway === 'ucbot') return ucbot;
   } catch (e) {
     logger.error(`⚠️ like_gateway lookup failed, using amartopupbd: ${(e as Error).message}`);
   }
