@@ -69,6 +69,12 @@ const schema = z.object({
   PINBOT_LIKE_API_KEY: z.string().optional().default(''),
   PINBOT_LIKE_BASE_URL: z.string().optional().default('https://api.pinbot.shop'),
 
+  // Free Fire auto-like via UcBot (fflikes.ucbot.net). DB settings
+  // `ucbot_like_api_key` / `ucbot_like_base_url` take precedence; these are the
+  // env fallbacks. Active only when the `like_gateway` setting is 'ucbot'.
+  UCBOT_LIKE_API_KEY: z.string().optional().default(''),
+  UCBOT_LIKE_BASE_URL: z.string().optional().default('https://fflikes.ucbot.net'),
+
   UDDOKTAPAY_API_KEY: z.string().optional().default(''),
   UDDOKTAPAY_BASE_URL: z.string().optional().default(''),
 
