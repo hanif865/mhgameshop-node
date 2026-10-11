@@ -7,6 +7,11 @@ import { env } from '../config/env';
 import { logger } from '../utils/logger';
 import { placeOrder, activeGateway } from '../providers/topup';
 import { placeLikeOrder } from '../providers/like';
+import {
+  parseLikeSubPackage,
+  startLikeSubscription,
+  type LikeSubPackage,
+} from './like-subscription.service';
 import { topupToUid, indoTopup, buyUcCodes } from '../providers/ucbot.provider';
 import { tryPoolTopup, tryPoolVoucherSale, restorePoolCodes, poolStockFor } from './pool.service';
 import { createPayment } from '../providers/uddoktapay.provider';
@@ -622,6 +627,10 @@ export async function runAutoTopup(order: any): Promise<void> {
  * makes the worker retry and finally refund (transient / misconfig cases).
  */
 async function runAutoLike(order: any): Promise<void> {
+  // providerProductId "<likes>x<days>" হলে এটা সাবস্ক্রিপশন প্যাকেজ (মাসিক/সাপ্তাহিক)।
+  const pkg = parseLikeSubPackage(order.variation?.providerProductId);
+  if (pkg) return runLikeSub(order, pkg);
+
   const result = await placeLikeOrder(order);
 
   // সফলভাবে কল হলো কিন্তু 0 লাইক (প্লেয়ার আজকের লিমিটে / আগেই ম্যাক্স) —
@@ -642,6 +651,34 @@ async function runAutoLike(order: any): Promise<void> {
     data: { status: 'completed', deliveryMessage: msg },
   });
   logger.info(`✅ AutoLike done order ${order.id}: ${result.likesGiven} likes → ${result.nickname}`);
+  await emitOrderStatus(order.id);
+}
+
+/**
+ * Auto-like SUBSCRIPTION শুরু (মাসিক/সাপ্তাহিক প্যাকেজ)। day-1 এর লাইক এখনই যায়,
+ * বাকি দিনগুলো like-subscription.service এর scheduler ফিক্সড সময়ে পাঠায়।
+ * day-1 এ 0 লাইক (ভুল UID) → cancel+refund (one-shot auto-like এর মতোই)।
+ * startLikeSubscription throw করলে worker রিট্রাই করে, শেষে refund।
+ */
+async function runLikeSub(order: any, pkg: LikeSubPackage): Promise<void> {
+  const res = await startLikeSubscription(order, pkg);
+
+  if (!res.ok) {
+    logger.warn(`⚠️ LikeSub day-1: 0 likes (order ${order.id}) — cancelling & refunding`);
+    await cancelAndRefundAutoTopup(order.id);
+    return;
+  }
+
+  const who = res.nickname || String(order.accountInfo?.player_id ?? '');
+  const msg =
+    `✅ Like subscription চালু — ${pkg.likesPerDay} likes/day × ${pkg.totalDays} দিন` +
+    (who ? `; day 1 sent to ${who}` : '');
+
+  await prisma.order.update({
+    where: { id: order.id },
+    data: { status: 'completed', deliveryMessage: msg },
+  });
+  logger.info(`✅ LikeSub started order ${order.id}: ${pkg.likesPerDay}x${pkg.totalDays}`);
   await emitOrderStatus(order.id);
 }
 

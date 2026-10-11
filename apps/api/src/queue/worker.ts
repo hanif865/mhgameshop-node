@@ -4,6 +4,10 @@ import { env } from '../config/env';
 import { logger } from '../utils/logger';
 import { QUEUE_NAME } from './index';
 import { loadOrder, runAutoTopup, cancelAndRefundAutoTopup } from '../services/order.service';
+import {
+  ensureLikeSubscriptionsTable,
+  runDueLikeSubscriptions,
+} from '../services/like-subscription.service';
 
 /**
  * Auto-topup worker. Run as a separate process:  npm run worker  (dev)
@@ -51,7 +55,33 @@ worker.on('failed', async (job, err) => {
 
 logger.info('🛠  Auto-topup worker started');
 
+// ---------------------------------------------------------------------------
+// Auto-like subscription scheduler (মাসিক/সাপ্তাহিক প্যাকেজ)।
+// প্রতি ১০ মিনিটে due (next_run_at <= now) সাবস্ক্রিপশনের আজকের লাইক পাঠায়।
+// ফিক্সড ডেলিভারি-টাইম হওয়ায় ঠিক মিনিটে না চললেও সমস্যা নেই — টিক পরে ধরে ফেলে।
+// ---------------------------------------------------------------------------
+const LIKE_SUB_TICK_MS = 10 * 60 * 1000;
+
+async function likeSubTick() {
+  try {
+    await runDueLikeSubscriptions();
+  } catch (e) {
+    logger.error(`LikeSub scheduler tick failed: ${(e as Error).message}`);
+  }
+}
+
+let likeSubTimer: NodeJS.Timeout | undefined;
+ensureLikeSubscriptionsTable()
+  .then(() => {
+    // বুটের একটু পরে প্রথম টিক (down-time এ miss হওয়া ডেলিভারি ধরতে), তারপর প্রতি ১০ মিনিটে।
+    setTimeout(likeSubTick, 15_000);
+    likeSubTimer = setInterval(likeSubTick, LIKE_SUB_TICK_MS);
+    logger.info('🗓️  Like-subscription scheduler started (every 10m)');
+  })
+  .catch((e) => logger.error('like_subscriptions ensure failed: ' + e.message));
+
 process.on('SIGTERM', async () => {
+  if (likeSubTimer) clearInterval(likeSubTimer);
   await worker.close();
   process.exit(0);
 });

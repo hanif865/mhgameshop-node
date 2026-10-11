@@ -81,6 +81,10 @@ const SECTIONS: Section[] = [
       },
       { key: 'ucbot_like_base_url', label: 'UcBot — Like Base URL' },
       { key: 'ucbot_like_api_key', label: 'UcBot — Like API Key', type: 'password' },
+      {
+        key: 'like_sub_hour',
+        label: 'Subscription Delivery Hour (0–23, BD time; default 4 = 4 AM)',
+      },
     ],
   },
   {
