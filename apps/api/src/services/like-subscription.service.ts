@@ -30,13 +30,14 @@ export interface LikeSubPackage {
 
 /**
  * ভ্যারিয়েশনের providerProductId থেকে সাবস্ক্রিপশন প্যাকেজ পড়ি।
- * "100x30" / "200 x 7" / "100*15" → {likesPerDay, totalDays}; না মিললে null
- * (মানে এটা সাবস্ক্রিপশন নয়, সাধারণ one-shot auto-like)।
+ * "100x30" / "200 x 7" / "100*15" / "200×30" / "100X15" / "200x30d" →
+ * {likesPerDay, totalDays}; না মিললে null (মানে এটা সাবস্ক্রিপশন নয়, সাধারণ
+ * one-shot auto-like)। সেপারেটর: x / X / × / * ; শেষে ঐচ্ছিক d/day/days/দিন।
  */
 export function parseLikeSubPackage(providerProductId?: string | null): LikeSubPackage | null {
   const m = String(providerProductId ?? '')
     .trim()
-    .match(/^(\d{2,4})\s*[x*]\s*(\d{1,3})$/i);
+    .match(/^(\d{2,4})\s*[x×*]\s*(\d{1,3})\s*(?:d|days?|দিন)?$/i);
   if (!m) return null;
   const likesPerDay = Number(m[1]) >= 200 ? 200 : 100;
   const totalDays = Math.max(1, Math.min(366, Number(m[2])));
