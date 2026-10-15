@@ -95,6 +95,11 @@ export default function EditVariation({ params }: { params: { id: string } }) {
               value={form.providerProductId ?? ''}
               onChange={(e) => setForm({ ...form, providerProductId: e.target.value })}
             />
+            <p className="mt-1 text-xs text-slate-400">
+              Auto-like one-shot: <code>like</code> (100) / <code>maxlike</code> (200). · Like
+              subscription (daily): <code>&lt;likes&gt;x&lt;days&gt;</code> — e.g.{' '}
+              <code>200x30</code>, <code>200x7</code>, <code>100x15</code> (ইংরেজি ছোট হাতের x)।
+            </p>
           </div>
           <div>
             <label className="label">Provider (shop / region code)</label>
