@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import { Send } from 'lucide-react';
 import { apiGet } from '@/lib/api';
 import { NoticeBar } from '@/components/home/NoticeBar';
@@ -103,8 +102,10 @@ export default async function HomePage() {
         {/* CTA strip */}
         <section className="grid gap-4 sm:grid-cols-2">
           <InstallAppButton />
-          <Link
-            href="/#products"
+          <a
+            href="https://t.me/mh_game_shop"
+            target="_blank"
+            rel="noopener noreferrer"
             className="flex items-center gap-4 rounded-2xl bg-primary p-5 text-white transition hover:bg-primary-dark"
           >
             <Send size={28} />
@@ -112,7 +113,7 @@ export default async function HomePage() {
               <p className="text-xs opacity-80">Join our</p>
               <p className="text-lg font-bold">Telegram Channel</p>
             </div>
-          </Link>
+          </a>
         </section>
       </div>
     </div>

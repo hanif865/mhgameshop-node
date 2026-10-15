@@ -31,6 +31,7 @@ export default function EditVariation({ params }: { params: { id: string } }) {
       provider: form.provider ?? null,
       providerProductId: form.providerProductId ?? null,
       automatic: !!form.automatic,
+      orderColumn: Number(form.orderColumn) || 0,
       status: Number(form.status),
     };
     const res = await apiPut(`/api/admin/variations/${id}`, body);
@@ -120,12 +121,26 @@ export default function EditVariation({ params }: { params: { id: string } }) {
             />
             Enable Auto Topup
           </label>
-          <div>
-            <label className="label">Status</label>
-            <select className="input w-40" value={form.status ?? 1} onChange={(e) => setForm({ ...form, status: Number(e.target.value) })}>
-              <option value={1}>Active</option>
-              <option value={0}>Inactive</option>
-            </select>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="label">Order (display position)</label>
+              <input
+                type="number"
+                className="input"
+                value={form.orderColumn ?? 0}
+                onChange={(e) => setForm({ ...form, orderColumn: e.target.value })}
+              />
+              <p className="mt-1 text-xs text-slate-400">
+                ছোট আগে দেখাবে (0,1,2…)। একই হলে দাম অনুযায়ী।
+              </p>
+            </div>
+            <div>
+              <label className="label">Status</label>
+              <select className="input" value={form.status ?? 1} onChange={(e) => setForm({ ...form, status: Number(e.target.value) })}>
+                <option value={1}>Active</option>
+                <option value={0}>Inactive</option>
+              </select>
+            </div>
           </div>
           <div className="flex justify-end">
             <button onClick={save} disabled={saving} className="btn-primary">

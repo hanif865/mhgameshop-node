@@ -14,6 +14,7 @@ interface Variation {
   title: string;
   price: string;
   stock: number;
+  orderColumn: number;
   automatic: boolean;
   product?: { title: string };
   _count?: { vouchers: number; autoVouchers: number };
@@ -47,7 +48,7 @@ export default function VariationsPage() {
   async function openCreate() {
     const res = await apiGet(`/api/admin/products?perPage=100`);
     setProducts(pageData<any>(res).items);
-    setForm({ automatic: false, status: 1, price: 0, buyRate: 0, stock: 0 });
+    setForm({ automatic: false, status: 1, price: 0, buyRate: 0, stock: 0, orderColumn: 0 });
     setCreating(true);
   }
 
@@ -75,6 +76,7 @@ export default function VariationsPage() {
     { key: 'title', label: 'Variation' },
     { key: 'price', label: 'Price', render: (r) => money(r.price) },
     { key: 'stock', label: 'Stock' },
+    { key: 'orderColumn', label: 'Order', render: (r) => r.orderColumn ?? 0 },
     {
       key: 'automatic',
       label: 'Auto Topup',
@@ -160,6 +162,16 @@ export default function VariationsPage() {
               <label className="label">Stock</label>
               <input type="number" className="input" value={form.stock ?? 0} onChange={(e) => setForm({ ...form, stock: Number(e.target.value) })} />
             </div>
+          </div>
+          <div>
+            <label className="label">Order (display position)</label>
+            <input
+              type="number"
+              className="input"
+              value={form.orderColumn ?? 0}
+              onChange={(e) => setForm({ ...form, orderColumn: Number(e.target.value) })}
+            />
+            <p className="mt-1 text-xs text-slate-400">ছোট আগে দেখাবে (0,1,2…)।</p>
           </div>
           <div className="flex justify-end gap-2">
             <button onClick={() => setCreating(false)} className="btn-ghost">Cancel</button>
