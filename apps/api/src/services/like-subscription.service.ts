@@ -275,6 +275,16 @@ export async function listLikeSubscriptions(opts: {
   return { items, total: Number(countRows[0]?.n ?? 0) };
 }
 
+/** কাস্টমারের নিজের সাবস্ক্রিপশন তালিকা (সাম্প্রতিক আগে)। */
+export async function listUserLikeSubscriptions(userId: number): Promise<LikeSubRow[]> {
+  return prisma.$queryRaw<LikeSubRow[]>`
+    SELECT ls.*, NULL::text AS user_name
+      FROM like_subscriptions ls
+     WHERE ls.user_id = ${userId}
+     ORDER BY ls.id DESC
+     LIMIT 50`;
+}
+
 /** একটি সাবস্ক্রিপশন বাতিল (active হলেই)। userId দিলে মালিকানা যাচাই করে। */
 export async function cancelLikeSubscription(id: number, userId?: number): Promise<boolean> {
   const affected = userId

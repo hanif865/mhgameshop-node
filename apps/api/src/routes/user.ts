@@ -9,6 +9,7 @@ import { referralStats, applyReferralCode } from '../services/referral.service';
 import { submitVideo, mySubmissions } from '../services/creator.service';
 import { spinStatus, doSpin } from '../services/spin.service';
 import { listSavedAccounts, saveAccount, removeSavedAccount } from '../services/savedAccount.service';
+import { listUserLikeSubscriptions } from '../services/like-subscription.service';
 import { gs } from '../utils/settings';
 import { levelFor, levelLadder } from '../utils/levels';
 
@@ -249,6 +250,15 @@ router.post(
       .parse(req.body);
     await removeSavedAccount(req.userId!, b.product_id, b.player_id);
     return ok(res, null, 'Removed.');
+  }),
+);
+
+// GET /api/user/like-subscriptions — কাস্টমারের নিজের অটো-লাইক সাবস্ক্রিপশন
+router.get(
+  '/like-subscriptions',
+  asyncHandler(async (req, res) => {
+    const items = await listUserLikeSubscriptions(req.userId!);
+    return ok(res, { items });
   }),
 );
 

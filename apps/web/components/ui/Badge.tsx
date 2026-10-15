@@ -2,6 +2,7 @@ import clsx from 'clsx';
 
 const TONE: Record<string, string> = {
   completed: 'bg-primary/10 text-primary-dark',
+  active: 'bg-green-100 text-green-700',
   processing: 'bg-slate-100 text-slate-600',
   autoprocessing: 'bg-slate-100 text-slate-600',
   pending: 'bg-amber-100 text-amber-700',
